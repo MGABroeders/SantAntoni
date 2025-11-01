@@ -107,7 +107,7 @@ function editUserSettings(userId) {
   document.getElementById('settingsMaxReservations').value = user.settings?.maxReservationsPerYear || 5;
   document.getElementById('settingsPriority').value = user.settings?.priority || 'normal';
   
-  document.getElementById('userSettingsModal').style.display = 'block';
+  document.getElementById('userSettingsModal').style.display = 'flex';
 }
 
 // Close settings modal
