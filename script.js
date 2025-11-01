@@ -32,53 +32,8 @@ const dagNamenVolledig = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
 
-// Functies voor data management
-function getReservations() {
-  const data = localStorage.getItem(STORAGE_KEY);
-  return data ? JSON.parse(data) : [];
-}
-
-function saveReservations(reservations) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(reservations));
-}
-
-function addReservation(reservation) {
-  const reservations = getReservations();
-  reservation.id = Date.now().toString();
-  reservation.created = new Date().toISOString();
-  reservations.push(reservation);
-  saveReservations(reservations);
-  return reservation;
-}
-
-function deleteReservation(id) {
-  const reservations = getReservations();
-  const filtered = reservations.filter(r => r.id !== id);
-  saveReservations(filtered);
-}
-
-// Berichten functies
-function getMessages() {
-  const data = localStorage.getItem(MESSAGES_KEY);
-  return data ? JSON.parse(data) : [];
-}
-
-function saveMessages(messages) {
-  localStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
-}
-
-function addMessage(author, text) {
-  const messages = getMessages();
-  const message = {
-    id: Date.now().toString(),
-    author,
-    text,
-    date: new Date().toISOString()
-  };
-  messages.unshift(message); // Nieuwste eerst
-  saveMessages(messages);
-  return message;
-}
+// Functies voor data management worden nu gehandeld door firebase-db.js
+// Deze localStorage versies blijven als fallback maar worden overschreven door firebase-db.js functies
 
 // Prijsberekening
 function calculatePrice(apartement, aankomst, vertrek) {
@@ -191,14 +146,19 @@ function formatDate(date) {
   return `${year}-${month}-${day}`;
 }
 
-// Kalender genereren
-function generateCalendar() {
-  const calendar = document.getElementById('calendar');
+// Kalender genereren voor specifiek appartement
+function generateCalendarForApartment(apartment) {
+  const calendarId = apartment ? `calendar-${apartment}` : 'calendar';
+  const calendar = document.getElementById(calendarId);
+  if (!calendar) return; // Als kalender niet bestaat, skip
+  
   const reservations = getReservations();
   
-  // Maand en jaar header
-  document.getElementById('currentMonth').textContent = 
-    `${maandNamen[currentMonth]} ${currentYear}`;
+  // Maand en jaar header (alleen bij single calendar)
+  const monthHeader = document.getElementById('currentMonth');
+  if (monthHeader && !apartment) {
+    monthHeader.textContent = `${maandNamen[currentMonth]} ${currentYear}`;
+  }
   
   // Leeg maken
   calendar.innerHTML = '';
@@ -236,34 +196,90 @@ function generateCalendar() {
       dayDiv.classList.add('today');
     }
     
-    // Check reserveringen
-    const dateReservations = getReservationsForDate(date, reservations);
-    const reservedA = isDateReservedForApartment(date, 'A', reservations);
-    const reservedB = isDateReservedForApartment(date, 'B', reservations);
+    // Check reserveringen - filter per appartement als specifiek appartement is geselecteerd
+    let dateReservations = getReservationsForDate(date, reservations);
+    let isReserved = false;
     
-    if (reservedA && reservedB) {
-      dayDiv.classList.add('reserved');
-    } else if (reservedA) {
-      dayDiv.classList.add('reserved-A');
-    } else if (reservedB) {
-      dayDiv.classList.add('reserved-B');
+    if (apartment) {
+      // Alleen reserveringen voor dit specifieke appartement
+      dateReservations = dateReservations.filter(r => r.appartement === apartment);
+      isReserved = isDateReservedForApartment(date, apartment, reservations);
+      
+      if (isReserved) {
+        dayDiv.classList.add(`reserved-${apartment}`);
+      }
+    } else {
+      // Originele logica voor single calendar
+      const reservedA = isDateReservedForApartment(date, 'A', reservations);
+      const reservedB = isDateReservedForApartment(date, 'B', reservations);
+      
+      if (reservedA && reservedB) {
+        dayDiv.classList.add('reserved');
+      } else if (reservedA) {
+        dayDiv.classList.add('reserved-A');
+      } else if (reservedB) {
+        dayDiv.classList.add('reserved-B');
+      }
     }
     
-    const dayNumber = document.createElement('div');
-    dayNumber.className = 'calendar-day-number';
-    dayNumber.textContent = date.getDate();
-    dayDiv.appendChild(dayNumber);
+     const dayNumber = document.createElement('div');
+     dayNumber.className = 'calendar-day-number';
+     dayNumber.textContent = date.getDate();
+     dayDiv.appendChild(dayNumber);
+     
+     // Voeg hover en click handlers toe voor reserveringen
+     if (dateReservations.length > 0 && isCurrentMonth) {
+       const res = dateReservations[0]; // Neem eerste reservering
+       const resStart = new Date(res.aankomst);
+       const resEnd = new Date(res.vertrek);
+       resEnd.setDate(resEnd.getDate() - 1); // Vertrekdag telt niet
+       
+       // Format datums voor weergave
+       const formatDisplayDate = (d) => {
+         return `${d.getDate()} ${maandNamen[d.getMonth()]} ${d.getFullYear()}`;
+       };
+       
+       // Tooltip bij hover
+       dayDiv.setAttribute('title', `${res.naam}`);
+       dayDiv.classList.add('has-reservation');
+       
+       // Click handler
+       dayDiv.style.cursor = 'pointer';
+       dayDiv.addEventListener('click', (e) => {
+         e.preventDefault();
+         alert(`Al geboekt door ${res.naam}\n\n` +
+               `Van: ${formatDisplayDate(resStart)}\n` +
+               `Tot: ${formatDisplayDate(resEnd)}\n` +
+               `Aantal personen: ${res.personen}\n` +
+               `Appartement: ${res.appartement}\n` +
+               `Status: ${res.status === 'goedgekeurd' ? 'Goedgekeurd' : res.status === 'in_afwachting' ? 'In afwachting' : 'Betaald'}`);
+       });
+     }
+     
+     calendar.appendChild(dayDiv);
+   }
+ }
+
+// Kalender genereren (wrapper functie)
+function generateCalendar() {
+  // Check of we twee kalenders hebben (home pagina) of één (kalender pagina)
+  const calendarA = document.getElementById('calendar-A');
+  const calendarB = document.getElementById('calendar-B');
+  const singleCalendar = document.getElementById('calendar');
+  
+  if (calendarA && calendarB) {
+    // Twee kalenders naast elkaar (home pagina)
+    generateCalendarForApartment('A');
+    generateCalendarForApartment('B');
     
-    if (dateReservations.length > 0 && isCurrentMonth) {
-      const reservationLabel = document.createElement('div');
-      reservationLabel.className = 'calendar-day-reservation';
-      const labels = dateReservations.map(r => `${r.naam} (${r.appartement})`);
-      reservationLabel.textContent = labels.slice(0, 2).join(', ');
-      if (labels.length > 2) reservationLabel.textContent += '...';
-      dayDiv.appendChild(reservationLabel);
+    // Update maand header
+    const monthHeader = document.getElementById('currentMonth');
+    if (monthHeader) {
+      monthHeader.textContent = `${maandNamen[currentMonth]} ${currentYear}`;
     }
-    
-    calendar.appendChild(dayDiv);
+  } else if (singleCalendar) {
+    // Één kalender (kalender pagina)
+    generateCalendarForApartment(null);
   }
 }
 
@@ -337,58 +353,146 @@ function hasOverlap(apartement, aankomst, vertrek, excludeId = null) {
   });
 }
 
+// Update reservation form based on login status
+function updateReservationForm() {
+  const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+  const loginPrompt = document.getElementById('loginPrompt');
+  const userInfo = document.getElementById('userInfo');
+  const nameField = document.getElementById('nameField');
+  const emailField = document.getElementById('emailField');
+  const currentUserInfo = document.getElementById('currentUserInfo');
+  const reservationForm = document.getElementById('reservationForm');
+  
+  if (!reservationForm) return; // Not on calendar page
+  
+  if (!user || !canBook()) {
+    if (loginPrompt) loginPrompt.style.display = 'block';
+    if (userInfo) userInfo.style.display = 'none';
+    if (nameField) {
+      nameField.style.display = 'block';
+      nameField.querySelector('input').required = true;
+    }
+    if (emailField) {
+      emailField.style.display = 'block';
+      emailField.querySelector('input').required = true;
+    }
+    reservationForm.style.opacity = '0.5';
+    reservationForm.style.pointerEvents = 'none';
+  } else {
+    if (loginPrompt) loginPrompt.style.display = 'none';
+    if (userInfo) {
+      userInfo.style.display = 'block';
+      if (currentUserInfo) {
+        currentUserInfo.innerHTML = `<strong>${user.name}</strong> (${user.email})`;
+      }
+    }
+    if (nameField) {
+      nameField.style.display = 'none';
+      nameField.querySelector('input').required = false;
+    }
+    if (emailField) {
+      emailField.style.display = 'none';
+      emailField.querySelector('input').required = false;
+    }
+    reservationForm.style.opacity = '1';
+    reservationForm.style.pointerEvents = 'auto';
+  }
+}
+
 // Formulier verwerken
 document.addEventListener('DOMContentLoaded', () => {
-  // Init
-  generateCalendar();
-  displayReservations();
+  // Init kalender op elke pagina waar hij bestaat (home en kalender)
+  const calendarA = document.getElementById('calendar-A');
+  const calendarB = document.getElementById('calendar-B');
+  const singleCalendar = document.getElementById('calendar');
   
-  // Stel minimale datum in (vandaag)
-  const today = formatDate(new Date());
-  document.getElementById('aankomst').setAttribute('min', today);
-  document.getElementById('vertrek').setAttribute('min', today);
+  if (calendarA || calendarB || singleCalendar) {
+    generateCalendar();
+  }
+  if (document.getElementById('reservationsList')) {
+    displayReservations();
+  }
   
-  // Update prijs bij wijziging datums of appartement
-  function updatePrice() {
-    const appartement = document.getElementById('appartement').value;
-    const aankomst = document.getElementById('aankomst').value;
-    const vertrek = document.getElementById('vertrek').value;
-    const priceDisplay = document.getElementById('priceDisplay');
-    
-    if (appartement && aankomst && vertrek && new Date(aankomst) < new Date(vertrek)) {
-      const priceInfo = calculatePrice(appartement, aankomst, vertrek);
-      document.getElementById('calculatedPrice').textContent = priceInfo.total.toFixed(2);
-      document.getElementById('priceBreakdown').textContent = priceInfo.breakdown;
-      priceDisplay.style.display = 'block';
-    } else {
-      priceDisplay.style.display = 'none';
+  // Update reservation form
+  updateReservationForm();
+  
+  // Re-check after auth loads
+  setTimeout(updateReservationForm, 100);
+  
+  // Stel minimale datum in (vandaag) - alleen op kalender pagina
+  const aankomstInput = document.getElementById('aankomst');
+  if (aankomstInput) {
+    const today = formatDate(new Date());
+    aankomstInput.setAttribute('min', today);
+    const vertrekInput = document.getElementById('vertrek');
+    if (vertrekInput) {
+      vertrekInput.setAttribute('min', today);
     }
   }
   
-  // Update vertrek min wanneer aankomst verandert
-  document.getElementById('aankomst').addEventListener('change', (e) => {
-    const aankomstDate = e.target.value;
-    document.getElementById('vertrek').setAttribute('min', aankomstDate);
-    
-    // Als vertrek voor aankomst is, reset vertrek
-    const vertrekInput = document.getElementById('vertrek');
-    if (vertrekInput.value && vertrekInput.value <= aankomstDate) {
-      vertrekInput.value = '';
+  // Update prijs bij wijziging datums of appartement - alleen op kalender pagina
+  const reservationForm = document.getElementById('reservationForm');
+  if (reservationForm) {
+    function updatePrice() {
+      const appartement = document.getElementById('appartement').value;
+      const aankomst = document.getElementById('aankomst').value;
+      const vertrek = document.getElementById('vertrek').value;
+      const priceDisplay = document.getElementById('priceDisplay');
+      
+      if (appartement && aankomst && vertrek && new Date(aankomst) < new Date(vertrek)) {
+        const priceInfo = calculatePrice(appartement, aankomst, vertrek);
+        document.getElementById('calculatedPrice').textContent = priceInfo.total.toFixed(2);
+        document.getElementById('priceBreakdown').textContent = priceInfo.breakdown;
+        priceDisplay.style.display = 'block';
+      } else {
+        priceDisplay.style.display = 'none';
+      }
     }
     
-    updatePrice();
-  });
+    // Update vertrek min wanneer aankomst verandert
+    const aankomstInput = document.getElementById('aankomst');
+    if (aankomstInput) {
+      aankomstInput.addEventListener('change', (e) => {
+        const aankomstDate = e.target.value;
+        const vertrekInput = document.getElementById('vertrek');
+        if (vertrekInput) {
+          vertrekInput.setAttribute('min', aankomstDate);
+          
+          // Als vertrek voor aankomst is, reset vertrek
+          if (vertrekInput.value && vertrekInput.value <= aankomstDate) {
+            vertrekInput.value = '';
+          }
+        }
+        
+        updatePrice();
+      });
+    }
+    
+    const vertrekInput = document.getElementById('vertrek');
+    if (vertrekInput) {
+      vertrekInput.addEventListener('change', updatePrice);
+    }
+    
+    const appartementSelect = document.getElementById('appartement');
+    if (appartementSelect) {
+      appartementSelect.addEventListener('change', updatePrice);
+    }
+  }
   
-  document.getElementById('vertrek').addEventListener('change', updatePrice);
-  document.getElementById('appartement').addEventListener('change', updatePrice);
-  
-  // Formulier submit
-  document.getElementById('reservationForm').addEventListener('submit', (e) => {
+  // Formulier submit - alleen op kalender pagina
+  if (reservationForm) {
+    reservationForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
+    // Check authentication
+    if (typeof requireBookingAccess === 'function' && !requireBookingAccess()) {
+      return;
+    }
+    
+    const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
     const appartement = document.getElementById('appartement').value;
-    const naam = document.getElementById('naam').value;
-    const email = document.getElementById('email').value;
+    const naam = user ? user.name : document.getElementById('naam').value;
+    const email = user ? user.email : document.getElementById('email').value;
     const aankomst = document.getElementById('aankomst').value;
     const vertrek = document.getElementById('vertrek').value;
     const personen = parseInt(document.getElementById('personen').value);
@@ -426,59 +530,105 @@ document.addEventListener('DOMContentLoaded', () => {
       personen,
       opmerking,
       prijs: priceInfo.total,
-      status: 'in_afwachting' // Kan later worden goedgekeurd
+      status: 'in_afwachting',
+      userId: user ? user.id : null,
+      createdBy: user ? user.name : naam
     };
     
-    addReservation(reservation);
+    const newReservation = addReservation(reservation);
+    
+    // Maak transactie aan
+    if (typeof addTransaction === 'function') {
+      addTransaction({
+        type: 'reservation',
+        reservationId: newReservation.id,
+        userName: naam,
+        amount: -priceInfo.total, // Negatief omdat het een betaling is
+        description: `Reservering Appartement ${appartement}: ${aankomst} - ${vertrek}`,
+        status: 'pending'
+      });
+    }
+    
     displayReservations();
     generateCalendar();
     
-    // Formulier resetten
-    document.getElementById('reservationForm').reset();
-    document.getElementById('aankomst').setAttribute('min', today);
-    document.getElementById('vertrek').setAttribute('min', today);
-    
-    alert('Reservering succesvol toegevoegd!');
-  });
-  
-  // Kalender navigatie
-  document.getElementById('prevMonth').addEventListener('click', () => {
-    currentMonth--;
-    if (currentMonth < 0) {
-      currentMonth = 11;
-      currentYear--;
-    }
-    generateCalendar();
-  });
-  
-  document.getElementById('nextMonth').addEventListener('click', () => {
-    currentMonth++;
-    if (currentMonth > 11) {
-      currentMonth = 0;
-      currentYear++;
-    }
-    generateCalendar();
-  });
-  
-  // Smooth scroll voor navigatie links
-  document.querySelectorAll('nav a').forEach(link => {
-    link.addEventListener('click', (e) => {
-      const href = link.getAttribute('href');
-      if (href.startsWith('#')) {
-        e.preventDefault();
-        const target = document.querySelector(href);
-        if (target) {
-          target.scrollIntoView({ behavior: 'smooth' });
-        }
-      }
+      // Formulier resetten
+      reservationForm.reset();
+      const today = formatDate(new Date());
+      const aankomstInput = document.getElementById('aankomst');
+      const vertrekInput = document.getElementById('vertrek');
+      if (aankomstInput) aankomstInput.setAttribute('min', today);
+      if (vertrekInput) vertrekInput.setAttribute('min', today);
+      
+      alert('Reservering succesvol toegevoegd!');
     });
-  });
+  }
   
-  // Foto galerij functionaliteit
-  initGallery();
+  // Kalender navigatie - op home en kalender pagina
+  const prevMonthBtn = document.getElementById('prevMonth');
+  const nextMonthBtn = document.getElementById('nextMonth');
   
-  // Familieberichten functionaliteit
-  initMessages();
+  if (prevMonthBtn) {
+    prevMonthBtn.addEventListener('click', () => {
+      currentMonth--;
+      if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+      }
+      generateCalendar();
+    });
+  }
+  
+  if (nextMonthBtn) {
+    nextMonthBtn.addEventListener('click', () => {
+      currentMonth++;
+      if (currentMonth > 11) {
+        currentMonth = 0;
+        currentYear++;
+      }
+      generateCalendar();
+    });
+  }
+  
+  // Navigatie werkt nu met echte pagina's, geen smooth scroll nodig
+  
+  // Foto galerij functionaliteit - alleen op fotos pagina
+  if (document.querySelector('.gallery-tabs')) {
+    initGallery();
+  }
+  
+  // Familieberichten functionaliteit - op berichten pagina en home pagina
+  if (document.getElementById('messageForm')) {
+    initMessages();
+    // Re-check after auth loads
+    setTimeout(() => {
+      updateMessageForm();
+    }, 100);
+  }
+});
+
+// Menu toggle functie
+function toggleMenu() {
+  const menu = document.getElementById('mainNav');
+  const toggle = document.getElementById('menuToggle');
+  
+  if (menu && toggle) {
+    menu.classList.toggle('active');
+    toggle.classList.toggle('active');
+  }
+}
+
+// Sluit menu als je buiten klikt
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('mainNav');
+  const toggle = document.getElementById('menuToggle');
+  
+  if (menu && toggle && menu.classList.contains('active')) {
+    if (!menu.contains(e.target) && !toggle.contains(e.target)) {
+      menu.classList.remove('active');
+      toggle.classList.remove('active');
+    }
+  }
 });
 
 // Foto galerij
@@ -518,21 +668,58 @@ function closeLightbox() {
   document.getElementById('lightbox').classList.remove('active');
 }
 
+// Update message form based on login status
+function updateMessageForm() {
+  const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+  const loginPrompt = document.getElementById('messageLoginPrompt');
+  const userInfo = document.getElementById('messageUserInfo');
+  const currentUserInfo = document.getElementById('messageCurrentUserInfo');
+  const messageForm = document.getElementById('messageForm');
+  
+  if (!messageForm) return; // Not on page with messages
+  
+  if (!user || !isLoggedIn()) {
+    // Not logged in - only show login prompt, hide form
+    if (loginPrompt) loginPrompt.style.display = 'block';
+    messageForm.style.display = 'none';
+  } else {
+    // Logged in - show form with user info
+    if (loginPrompt) loginPrompt.style.display = 'none';
+    messageForm.style.display = 'block';
+    if (userInfo && currentUserInfo) {
+      currentUserInfo.innerHTML = `<strong>${user.name}</strong> (${user.email})`;
+    }
+  }
+}
+
 // Familieberichten
 function initMessages() {
   displayMessages();
+  updateMessageForm();
   
-  document.getElementById('messageForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const author = document.getElementById('messageAuthor').value;
-    const text = document.getElementById('messageText').value;
-    
-    if (author && text) {
-      addMessage(author, text);
-      displayMessages();
-      document.getElementById('messageForm').reset();
-    }
-  });
+  const messageForm = document.getElementById('messageForm');
+  if (messageForm) {
+    messageForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      // Check if logged in - required
+      const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+      if (!user || !isLoggedIn()) {
+        alert('Je moet ingelogd zijn om berichten te plaatsen');
+        return;
+      }
+      
+      const author = user.name; // Always use logged in user's name
+      const text = document.getElementById('messageText').value;
+      
+      if (text) {
+        addMessage(author, text);
+        displayMessages();
+        messageForm.reset();
+        updateMessageForm(); // Re-update form
+      }
+    });
+  }
 }
 
 function displayMessages() {

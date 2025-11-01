@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kalender & Reserveringen - Familie Sant Antoni</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <button class="menu-toggle" id="menuToggle" onclick="toggleMenu()">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <h1><a href="index.html">Appartementen Sant Antoni</a></h1>
+      <div class="header-right">
+        <a href="contact.html" class="header-link">Contact</a>
+        <span id="authNav"></span>
+      </div>
+    </div>
+    <nav id="mainNav" class="main-nav">
+      <a href="index.html">Home</a>
+      <a href="appartementen.html">Appartementen</a>
+      <a href="kalender.html">Kalender</a>
+      <a href="fotos.html">Foto's</a>
+      <a href="berichten.html">Berichten</a>
+    </nav>
+  </header>
+
+  <section id="kalender">
+    <h2>Kalender & Reserveringen</h2>
+    
+    <div class="reservation-form-container">
+      <div class="form-section">
+        <h3>Nieuwe Reservering</h3>
+        <form id="reservationForm">
+          <div class="form-group">
+            <label for="appartement">Appartement:</label>
+            <select id="appartement" required>
+              <option value="">Selecteer appartement</option>
+              <option value="A">Appartement A</option>
+              <option value="B">Appartement B</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="naam">Naam:</label>
+            <input type="text" id="naam" required placeholder="Vul je naam in">
+          </div>
+          <div class="form-group">
+            <label for="email">E-mailadres:</label>
+            <input type="email" id="email" required placeholder="jouw@email.nl">
+          </div>
+          <div class="form-group">
+            <label for="aankomst">Aankomstdatum:</label>
+            <input type="date" id="aankomst" required>
+          </div>
+          <div class="form-group">
+            <label for="vertrek">Vertrekdatum:</label>
+            <input type="date" id="vertrek" required>
+          </div>
+          <div class="form-group">
+            <label for="personen">Aantal personen:</label>
+            <input type="number" id="personen" min="1" max="8" value="2" required>
+          </div>
+          <div class="form-group">
+            <label for="opmerking">Opmerkingen (optioneel):</label>
+            <textarea id="opmerking" rows="3" placeholder="Extra informatie..."></textarea>
+          </div>
+          <div id="priceDisplay" class="price-display" style="display: none;">
+            <strong>Geschatte prijs: €<span id="calculatedPrice">0</span></strong>
+            <small id="priceBreakdown"></small>
+          </div>
+          <button type="submit" class="btn-primary">Reservering aanvragen</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="calendar-section">
+      <div class="calendar-controls">
+        <button id="prevMonth" class="btn-nav">← Vorige</button>
+        <h3 id="currentMonth"></h3>
+        <button id="nextMonth" class="btn-nav">Volgende →</button>
+      </div>
+      <div id="calendar"></div>
+    </div>
+
+    <div class="reservations-list">
+      <h3>Huidige Reserveringen</h3>
+      <div id="reservationsList"></div>
+    </div>
+  </section>
+
+  <footer>
+    <p>&copy; 2025 Familie Sant Antoni</p>
+  </footer>
+
+  <script src="auth.js"></script>
+  <script src="auth-ui.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
+

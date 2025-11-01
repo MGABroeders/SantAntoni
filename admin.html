@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Beheerder Dashboard - Familie Sant Antoni</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <button class="menu-toggle" id="menuToggle" onclick="toggleMenu()">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <h1><a href="index.html">Appartementen Sant Antoni</a></h1>
+      <div class="header-right">
+        <a href="#" onclick="logout(); return false;" class="header-link">Uitloggen</a>
+        <span id="authNav"></span>
+      </div>
+    </div>
+    <nav id="mainNav" class="main-nav">
+      <a href="index.html">Home</a>
+      <a href="admin.html">Beheer</a>
+      <a href="appartementen.html">Appartementen</a>
+      <a href="kalender.html">Kalender</a>
+      <a href="fotos.html">Foto's</a>
+      <a href="berichten.html">Berichten</a>
+    </nav>
+  </header>
+
+  <section id="admin">
+    <h2>Beheerder Dashboard</h2>
+    
+    <!-- Tabs -->
+    <div class="admin-tabs">
+      <button class="admin-tab active" data-tab="accounts">Accounts</button>
+      <button class="admin-tab" data-tab="transactions">Transacties</button>
+      <button class="admin-tab" data-tab="settings">Instellingen</button>
+    </div>
+
+    <!-- Accounts Tab -->
+    <div id="accountsTab" class="admin-tab-content active">
+      <h3>Gebruikersbeheer</h3>
+      
+      <!-- Pending Approvals -->
+      <div class="admin-section">
+        <h4>Wachtend op goedkeuring</h4>
+        <div id="pendingUsers" class="users-list"></div>
+      </div>
+
+      <!-- Approved Users -->
+      <div class="admin-section">
+        <h4>Goedgekeurde gebruikers</h4>
+        <div id="approvedUsers" class="users-list"></div>
+      </div>
+    </div>
+
+    <!-- Transactions Tab -->
+    <div id="transactionsTab" class="admin-tab-content">
+      <h3>Transacties</h3>
+      <div id="transactionsList" class="transactions-list"></div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div id="settingsTab" class="admin-tab-content">
+      <h3>Systeem Instellingen</h3>
+      <div class="admin-section">
+        <p>Systeem configuratie opties komen hier</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- User Settings Modal -->
+  <div id="userSettingsModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeUserSettingsModal()">&times;</span>
+      <h3>Instellingen voor <span id="settingsUserName"></span></h3>
+      <form id="userSettingsForm">
+        <input type="hidden" id="settingsUserId">
+        
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="settingsCanBook"> Mag reserveringen maken
+          </label>
+        </div>
+        
+        <div class="form-group">
+          <label for="settingsMaxReservations">Max reserveringen per jaar:</label>
+          <input type="number" id="settingsMaxReservations" min="1" max="20" value="5">
+        </div>
+        
+        <div class="form-group">
+          <label for="settingsPriority">Prioriteit:</label>
+          <select id="settingsPriority">
+            <option value="low">Laag</option>
+            <option value="normal">Normaal</option>
+            <option value="high">Hoog</option>
+          </select>
+        </div>
+        
+        <button type="submit" class="btn-primary">Opslaan</button>
+      </form>
+    </div>
+  </div>
+
+  <footer>
+    <p>&copy; 2025 Familie Sant Antoni</p>
+  </footer>
+
+  <script src="auth.js"></script>
+  <script src="auth-ui.js"></script>
+  <script src="script.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
+

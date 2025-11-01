@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inloggen - Familie Sant Antoni</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <button class="menu-toggle" id="menuToggle" onclick="toggleMenu()">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <h1><a href="index.html">Appartementen Sant Antoni</a></h1>
+      <div class="header-right">
+        <a href="contact.html" class="header-link">Contact</a>
+        <span id="authNav"></span>
+      </div>
+    </div>
+    <nav id="mainNav" class="main-nav">
+      <a href="index.html">Home</a>
+      <a href="appartementen.html">Appartementen</a>
+      <a href="kalender.html">Kalender</a>
+      <a href="fotos.html">Foto's</a>
+      <a href="berichten.html">Berichten</a>
+    </nav>
+  </header>
+
+  <section id="login">
+    <div class="auth-container">
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-tab="login">Inloggen</button>
+        <button class="auth-tab" data-tab="register">Registreren</button>
+      </div>
+
+      <!-- Login Form -->
+      <div id="loginForm" class="auth-form active">
+        <h2>Inloggen</h2>
+        <form id="loginFormElement">
+          <div class="form-group">
+            <label for="loginEmail">E-mailadres:</label>
+            <input type="email" id="loginEmail" required placeholder="jouw@email.nl">
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">Wachtwoord:</label>
+            <input type="password" id="loginPassword" required placeholder="Je wachtwoord">
+          </div>
+          <button type="submit" class="btn-primary">Inloggen</button>
+        </form>
+        <div id="loginError" class="error-message" style="display: none;"></div>
+      </div>
+
+      <!-- Register Form -->
+      <div id="registerForm" class="auth-form">
+        <h2>Nieuw account aanmaken</h2>
+        <form id="registerFormElement">
+          <div class="form-group">
+            <label for="registerName">Volledige naam:</label>
+            <input type="text" id="registerName" required placeholder="Je volledige naam">
+          </div>
+          <div class="form-group">
+            <label for="registerEmail">E-mailadres:</label>
+            <input type="email" id="registerEmail" required placeholder="jouw@email.nl">
+          </div>
+          <div class="form-group">
+            <label for="registerPassword">Wachtwoord:</label>
+            <input type="password" id="registerPassword" required placeholder="Minimaal 6 tekens" minlength="6">
+          </div>
+          <div class="form-group">
+            <label for="registerPasswordConfirm">Wachtwoord bevestigen:</label>
+            <input type="password" id="registerPasswordConfirm" required placeholder="Herhaal wachtwoord" minlength="6">
+          </div>
+          <button type="submit" class="btn-primary">Account aanmaken</button>
+        </form>
+        <div id="registerError" class="error-message" style="display: none;"></div>
+        <div id="registerSuccess" class="success-message" style="display: none;">
+          Account aangemaakt! Wacht op goedkeuring van een beheerder.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>&copy; 2025 Familie Sant Antoni</p>
+  </footer>
+
+  <script src="auth.js"></script>
+  <script src="auth-ui.js"></script>
+  <script>
+    // Initialize login page
+    if (typeof initLoginPage === 'function') {
+      document.addEventListener('DOMContentLoaded', initLoginPage);
+    }
+  </script>
+</body>
+</html>
+

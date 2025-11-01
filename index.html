@@ -8,14 +8,24 @@
 </head>
 <body>
   <header>
-    <h1>Appartementen Sant Antoni</h1>
-    <nav>
-      <a href="#home">Home</a>
-      <a href="#appartementen">Appartementen</a>
-      <a href="#kalender">Kalender</a>
-      <a href="#fotos">Foto's</a>
-      <a href="#berichten">Berichten</a>
-      <a href="#contact">Contact</a>
+    <div class="header-top">
+      <button class="menu-toggle" id="menuToggle" onclick="toggleMenu()">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <h1><a href="index.html">Appartementen Sant Antoni</a></h1>
+      <div class="header-right">
+        <a href="contact.html" class="header-link">Contact</a>
+        <span id="authNav"></span>
+      </div>
+    </div>
+    <nav id="mainNav" class="main-nav">
+      <a href="index.html">Home</a>
+      <a href="appartementen.html">Appartementen</a>
+      <a href="kalender.html">Kalender</a>
+      <a href="fotos.html">Foto's</a>
+      <a href="berichten.html">Berichten</a>
     </nav>
   </header>
 
@@ -27,227 +37,111 @@
         in Sant Antoni. Hier kun je de beschikbaarheid bekijken, reserveringen maken, foto's bekijken 
         en familieberichten delen.
       </p>
-      <div class="quick-links">
-        <a href="#kalender" class="quick-link-card">
-          <h3>📅 Kalender bekijken</h3>
-          <p>Zie welke periodes beschikbaar zijn</p>
-        </a>
-        <a href="#appartementen" class="quick-link-card">
-          <h3>🏠 Appartementen</h3>
-          <p>Bekijk details en voorzieningen</p>
-        </a>
-        <a href="#fotos" class="quick-link-card">
-          <h3>📸 Foto's</h3>
-          <p>Sfeerbeelden van beide appartementen</p>
-        </a>
-      </div>
     </div>
-  </section>
-
-  <section id="appartementen">
-    <h2>Onze Appartementen</h2>
     
-    <div class="apartment-detail">
-      <div class="apartment-header">
-        <h3>Appartement A</h3>
-        <span class="apartment-badge">Uitzicht op zee</span>
-      </div>
-      <div class="apartment-content">
-        <div class="apartment-image-container">
-          <img src="foto1.jpg" alt="Appartement A" class="apartment-main-image">
-        </div>
-        <div class="apartment-info">
-          <h4>Beschrijving</h4>
-          <p>Appartement A biedt een prachtig uitzicht over de Middellandse Zee. Modern ingericht met 
-          mediterrane elementen en alle gemakken voor een comfortabel verblijf.</p>
-          
-          <h4>Voorzieningen</h4>
-          <ul class="amenities-list">
-            <li>✅ 2 slaapkamers</li>
-            <li>✅ Volledig ingerichte keuken</li>
-            <li>✅ Airconditioning</li>
-            <li>✅ Balkon met uitzicht op zee</li>
-            <li>✅ WiFi</li>
-            <li>✅ Woonkamer met TV</li>
-            <li>✅ Badkamer met douche</li>
-            <li>✅ Parkeerplek beschikbaar</li>
-          </ul>
-          
-          <h4>Ligging</h4>
-          <p>Centraal gelegen in Sant Antoni, op loopafstand van het strand en het centrum. 
-          Perfecte uitvalsbasis voor ontspanning en ontdekking.</p>
-          
-          <a href="#kalender" class="btn-booking">Bekijk beschikbaarheid</a>
-        </div>
-      </div>
-    </div>
-
-    <div class="apartment-detail">
-      <div class="apartment-header">
-        <h3>Appartement B</h3>
-        <span class="apartment-badge">Dakterras</span>
-      </div>
-      <div class="apartment-content">
-        <div class="apartment-image-container">
-          <img src="foto2.jpg" alt="Appartement B" class="apartment-main-image">
-        </div>
-        <div class="apartment-info">
-          <h4>Beschrijving</h4>
-          <p>Appartement B beschikt over een prachtig dakterras waar je kunt genieten van de zon 
-          en het uitzicht. Modern interieur gecombineerd met comfortabele voorzieningen.</p>
-          
-          <h4>Voorzieningen</h4>
-          <ul class="amenities-list">
-            <li>✅ 2 slaapkamers</li>
-            <li>✅ Volledig ingerichte keuken</li>
-            <li>✅ Airconditioning</li>
-            <li>✅ Groot dakterras</li>
-            <li>✅ WiFi</li>
-            <li>✅ Woonkamer met TV</li>
-            <li>✅ Badkamer met douche</li>
-            <li>✅ Vlak bij het strand</li>
-            <li>✅ Buitenruimte met zitgelegenheid</li>
-          </ul>
-          
-          <h4>Ligging</h4>
-          <p>Dichtbij het strand en het centrum van Sant Antoni. Het dakterras biedt privacy 
-          en een prachtig uitzicht over de omgeving.</p>
-          
-          <a href="#kalender" class="btn-booking">Bekijk beschikbaarheid</a>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section id="kalender">
-    <h2>Kalender & Reserveringen</h2>
-    
-    <div class="reservation-form-container">
-      <div class="form-section">
-        <h3>Nieuwe Reservering</h3>
-        <form id="reservationForm">
-          <div class="form-group">
-            <label for="appartement">Appartement:</label>
-            <select id="appartement" required>
-              <option value="">Selecteer appartement</option>
-              <option value="A">Appartement A</option>
-              <option value="B">Appartement B</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="naam">Naam:</label>
-            <input type="text" id="naam" required placeholder="Vul je naam in">
-          </div>
-          <div class="form-group">
-            <label for="email">E-mailadres:</label>
-            <input type="email" id="email" required placeholder="jouw@email.nl">
-          </div>
-          <div class="form-group">
-            <label for="aankomst">Aankomstdatum:</label>
-            <input type="date" id="aankomst" required>
-          </div>
-          <div class="form-group">
-            <label for="vertrek">Vertrekdatum:</label>
-            <input type="date" id="vertrek" required>
-          </div>
-          <div class="form-group">
-            <label for="personen">Aantal personen:</label>
-            <input type="number" id="personen" min="1" max="8" value="2" required>
-          </div>
-          <div class="form-group">
-            <label for="opmerking">Opmerkingen (optioneel):</label>
-            <textarea id="opmerking" rows="3" placeholder="Extra informatie..."></textarea>
-          </div>
-          <div id="priceDisplay" class="price-display" style="display: none;">
-            <strong>Geschatte prijs: €<span id="calculatedPrice">0</span></strong>
-            <small id="priceBreakdown"></small>
-          </div>
-          <button type="submit" class="btn-primary">Reservering aanvragen</button>
-        </form>
-      </div>
-    </div>
-
-    <div class="calendar-section">
+    <!-- Kalender op home pagina -->
+    <div class="calendar-section" style="margin-top: 3em;">
+      <h2>Beschikbaarheid</h2>
       <div class="calendar-controls">
         <button id="prevMonth" class="btn-nav">← Vorige</button>
         <h3 id="currentMonth"></h3>
         <button id="nextMonth" class="btn-nav">Volgende →</button>
       </div>
-      <div id="calendar"></div>
-    </div>
-
-    <div class="reservations-list">
-      <h3>Huidige Reserveringen</h3>
-      <div id="reservationsList"></div>
-    </div>
-  </section>
-
-  <section id="fotos">
-    <h2>Foto Galerij</h2>
-    <div class="photo-gallery">
-      <div class="gallery-tabs">
-        <button class="gallery-tab active" data-gallery="all">Alle foto's</button>
-        <button class="gallery-tab" data-gallery="A">Appartement A</button>
-        <button class="gallery-tab" data-gallery="B">Appartement B</button>
-        <button class="gallery-tab" data-gallery="omgeving">Omgeving</button>
-      </div>
-      <div class="gallery-grid" id="galleryGrid">
-        <!-- Foto's worden hier dynamisch geladen -->
-        <div class="gallery-item" data-category="A">
-          <img src="foto1.jpg" alt="Appartement A" onclick="openLightbox(this.src, this.alt)">
+      <div class="calendars-container">
+        <div class="calendar-wrapper">
+          <h3 class="calendar-apartment-title">Appartement A</h3>
+          <div id="calendar-A" class="calendar-apartment"></div>
         </div>
-        <div class="gallery-item" data-category="B">
-          <img src="foto2.jpg" alt="Appartement B" onclick="openLightbox(this.src, this.alt)">
+        <div class="calendar-wrapper">
+          <h3 class="calendar-apartment-title">Appartement B</h3>
+          <div id="calendar-B" class="calendar-apartment"></div>
         </div>
-        <!-- Meer foto's kunnen hier worden toegevoegd -->
       </div>
     </div>
     
-    <!-- Lightbox voor uitvergrootte foto's -->
-    <div id="lightbox" class="lightbox" onclick="closeLightbox()">
-      <span class="lightbox-close">&times;</span>
-      <img id="lightbox-img" class="lightbox-image" src="" alt="">
-    </div>
-  </section>
-
-  <section id="berichten">
-    <h2>Familieberichten</h2>
-    <div class="messages-section">
-      <div class="new-message-form">
-        <h3>Nieuw bericht plaatsen</h3>
-        <form id="messageForm">
-          <div class="form-group">
-            <label for="messageAuthor">Je naam:</label>
-            <input type="text" id="messageAuthor" required placeholder="Je naam">
+    <!-- Foto Galerij op home pagina -->
+    <section id="fotos" style="margin-top: 3em;">
+      <h2>Foto Galerij</h2>
+      <div class="photo-gallery">
+        <div class="gallery-tabs">
+          <button class="gallery-tab active" data-gallery="all">Alle foto's</button>
+          <button class="gallery-tab" data-gallery="A">Appartement A</button>
+          <button class="gallery-tab" data-gallery="B">Appartement B</button>
+          <button class="gallery-tab" data-gallery="omgeving">Omgeving</button>
+        </div>
+        <div class="gallery-grid" id="galleryGrid">
+          <!-- Foto's worden hier dynamisch geladen -->
+          <div class="gallery-item" data-category="A">
+            <img src="foto1.jpg" alt="Appartement A" onclick="openLightbox(this.src, this.alt)">
           </div>
-          <div class="form-group">
-            <label for="messageText">Bericht:</label>
-            <textarea id="messageText" rows="4" required placeholder="Deel een update, ervaring of nieuws..."></textarea>
+          <div class="gallery-item" data-category="B">
+            <img src="foto2.jpg" alt="Appartement B" onclick="openLightbox(this.src, this.alt)">
           </div>
-          <button type="submit" class="btn-primary">Bericht plaatsen</button>
-        </form>
+          <!-- Meer foto's kunnen hier worden toegevoegd -->
+        </div>
       </div>
-      <div class="messages-list" id="messagesList">
-        <!-- Berichten worden hier dynamisch geladen -->
+      
+      <!-- Lightbox voor uitvergrootte foto's -->
+      <div id="lightbox" class="lightbox" onclick="closeLightbox()">
+        <span class="lightbox-close">&times;</span>
+        <img id="lightbox-img" class="lightbox-image" src="" alt="">
       </div>
-    </div>
-  </section>
-
-  <section id="contact">
-    <h2>Contact</h2>
-    <div class="contact-section">
-      <p>Voor vragen over reserveringen, neem contact op met de familie.</p>
-      <div class="contact-info">
-        <p><strong>E-mail:</strong> <a href="mailto:info@santantoni.nl">info@santantoni.nl</a></p>
-        <p><strong>WhatsApp groep:</strong> Voor direct contact met de familie</p>
+    </section>
+    
+    <!-- Familieberichten op home pagina -->
+    <section id="berichten" style="margin-top: 3em;">
+      <h2>Familieberichten</h2>
+      <div class="messages-section">
+        <div class="messages-list" id="messagesList">
+          <!-- Berichten worden hier dynamisch geladen -->
+        </div>
+        <div class="new-message-form">
+          <h3>Nieuw bericht plaatsen</h3>
+          <div id="messageLoginPrompt" style="display: none; padding: 1.5em; text-align: center; background: #fff3cd; border-radius: 8px; margin-bottom: 1em;">
+            <p>Je moet ingelogd zijn om berichten te plaatsen.</p>
+            <a href="login.html" class="btn-primary">Inloggen</a>
+          </div>
+          <form id="messageForm" style="display: none;">
+            <div id="messageUserInfo" class="form-group">
+              <label>Bericht van:</label>
+              <div id="messageCurrentUserInfo" style="padding: 0.5em; background: #e3f2fd; border-radius: 4px;"></div>
+            </div>
+            <div class="form-group">
+              <label for="messageText">Bericht:</label>
+              <textarea id="messageText" rows="4" required placeholder="Deel een update, ervaring of nieuws..."></textarea>
+            </div>
+            <button type="submit" class="btn-primary">Bericht plaatsen</button>
+          </form>
+        </div>
       </div>
-    </div>
+    </section>
   </section>
 
   <footer>
     <p>&copy; 2025 Familie Sant Antoni</p>
   </footer>
 
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
+  
+  <!-- Firebase Config & Data Layer -->
+  <script src="firebase-config.js"></script>
+  <script src="firebase-db.js"></script>
+  
+  <!-- App Scripts -->
+  <script src="auth.js"></script>
+  <script src="auth-ui.js"></script>
   <script src="script.js"></script>
+  
+  <!-- Initialize Firebase -->
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      if (typeof initFirebase === 'function') {
+        initFirebase();
+      }
+    });
+  </script>
 </body>
 </html>

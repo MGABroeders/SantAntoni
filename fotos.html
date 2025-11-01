@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Foto Galerij - Familie Sant Antoni</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="header-top">
+      <button class="menu-toggle" id="menuToggle" onclick="toggleMenu()">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <h1><a href="index.html">Appartementen Sant Antoni</a></h1>
+      <div class="header-right">
+        <a href="contact.html" class="header-link">Contact</a>
+        <span id="authNav"></span>
+      </div>
+    </div>
+    <nav id="mainNav" class="main-nav">
+      <a href="index.html">Home</a>
+      <a href="appartementen.html">Appartementen</a>
+      <a href="kalender.html">Kalender</a>
+      <a href="fotos.html">Foto's</a>
+      <a href="berichten.html">Berichten</a>
+    </nav>
+  </header>
+
+  <section id="fotos">
+    <h2>Foto Galerij</h2>
+    <div class="photo-gallery">
+      <div class="gallery-tabs">
+        <button class="gallery-tab active" data-gallery="all">Alle foto's</button>
+        <button class="gallery-tab" data-gallery="A">Appartement A</button>
+        <button class="gallery-tab" data-gallery="B">Appartement B</button>
+        <button class="gallery-tab" data-gallery="omgeving">Omgeving</button>
+      </div>
+      <div class="gallery-grid" id="galleryGrid">
+        <!-- Foto's worden hier dynamisch geladen -->
+        <div class="gallery-item" data-category="A">
+          <img src="foto1.jpg" alt="Appartement A" onclick="openLightbox(this.src, this.alt)">
+        </div>
+        <div class="gallery-item" data-category="B">
+          <img src="foto2.jpg" alt="Appartement B" onclick="openLightbox(this.src, this.alt)">
+        </div>
+        <!-- Meer foto's kunnen hier worden toegevoegd -->
+      </div>
+    </div>
+    
+    <!-- Lightbox voor uitvergrootte foto's -->
+    <div id="lightbox" class="lightbox" onclick="closeLightbox()">
+      <span class="lightbox-close">&times;</span>
+      <img id="lightbox-img" class="lightbox-image" src="" alt="">
+    </div>
+  </section>
+
+  <footer>
+    <p>&copy; 2025 Familie Sant Antoni</p>
+  </footer>
+
+  <script src="auth.js"></script>
+  <script src="auth-ui.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
+
