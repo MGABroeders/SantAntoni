@@ -32,15 +32,17 @@ function logout() {
   window.location.href = 'index.html';
 }
 
-// Initialiseer eerste admin account als er nog geen gebruikers zijn
-function initAdminUser() {
+// Initialiseer test accounts
+function initTestUsers() {
   const users = getUsers();
-  if (users.length === 0) {
-    const adminUser = {
-      id: 'admin1',
-      name: 'Beheerder',
+  
+  // Admin account
+  if (!users.find(u => u.id === 'admin')) {
+    users.push({
+      id: 'admin',
+      name: 'admin',
       email: 'admin@santantoni.nl',
-      password: 'admin123', // In productie moet dit gehashed zijn!
+      password: '123',
       role: 'admin',
       approved: true,
       settings: {
@@ -49,10 +51,48 @@ function initAdminUser() {
         priority: 'high'
       },
       created: new Date().toISOString()
-    };
-    users.push(adminUser);
+    });
+  }
+  
+  // Test1 account
+  if (!users.find(u => u.id === 'test1')) {
+    users.push({
+      id: 'test1',
+      name: 'test1',
+      email: 'test1@santantoni.nl',
+      password: '123',
+      role: 'user',
+      approved: true,
+      settings: {
+        canBook: true,
+        maxReservationsPerYear: 5,
+        priority: 'normal'
+      },
+      created: new Date().toISOString()
+    });
+  }
+  
+  // Test2 account
+  if (!users.find(u => u.id === 'test2')) {
+    users.push({
+      id: 'test2',
+      name: 'test2',
+      email: 'test2@santantoni.nl',
+      password: '123',
+      role: 'user',
+      approved: true,
+      settings: {
+        canBook: true,
+        maxReservationsPerYear: 5,
+        priority: 'normal'
+      },
+      created: new Date().toISOString()
+    });
+  }
+  
+  if (users.length > 0) {
     saveUsers(users);
-    console.log('Admin account aangemaakt: admin@santantoni.nl / admin123');
+    console.log('Test accounts aangemaakt: admin / test1 / test2 (allemaal wachtwoord: 123)');
   }
 }
 
@@ -86,16 +126,18 @@ function register(name, email, password) {
   return { success: true, message: 'Account aangemaakt. Wacht op goedkeuring.' };
 }
 
-// Login
-function login(email, password) {
+// Login - ondersteunt zowel email als account naam
+function login(emailOrName, password) {
   const users = getUsers();
-  const user = users.find(u => 
-    u.email.toLowerCase() === email.toLowerCase() && 
-    u.password === password
-  );
+  const user = users.find(u => {
+    const emailMatch = u.email.toLowerCase() === emailOrName.toLowerCase();
+    const nameMatch = u.name.toLowerCase() === emailOrName.toLowerCase();
+    const passwordMatch = u.password === password;
+    return (emailMatch || nameMatch) && passwordMatch;
+  });
   
   if (!user) {
-    return { success: false, message: 'Ongeldig e-mailadres of wachtwoord' };
+    return { success: false, message: 'Ongeldig e-mailadres/naam of wachtwoord' };
   }
   
   if (!user.approved) {
@@ -200,8 +242,8 @@ function linkReservationToTransaction(reservationId, transactionId) {
   }
 }
 
-// Init admin bij laden
+// Init test users bij laden
 if (typeof window !== 'undefined') {
-  initAdminUser();
+  initTestUsers();
 }
 
