@@ -351,15 +351,19 @@ function generateCalendarForApartment(apartment) {
        
        if (user && user.family && isCurrentMonth && !isReserved) {
          const maand = date.getMonth();
+         const year = currentYear;
+         const today = new Date();
+         const currentYearNum = today.getFullYear();
          
          // Voor zomermaanden (juni-september) check familie voorrang
          if (maand >= 5 && maand <= 8) {
-           const year = date.getFullYear();
            const priorityFamily = getPriorityFamilyForMonth(maand, year, apartment);
-           const today = new Date();
-           const isPreseason = today.getMonth() < 3;
            
-           // Voorseizoen: alleen voorgang families
+           // Voorseizoen (jan-maart): alleen voorgang families voor zomermaanden
+           // Maar alleen voor het huidige jaar, niet voor toekomstige jaren
+           const isPreseason = today.getMonth() < 3 && year === currentYearNum;
+           
+           // Alleen tonen overlay als we in voorseizoen zijn EN niet de voorgang familie
            if (isPreseason && user.family !== priorityFamily) {
              isDisabledBooking = true;
              dayDiv.classList.add('disabled-booking');
@@ -708,12 +712,13 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Date input event listeners
   const dateInputs = document.querySelectorAll('.date-input');
-  const currentYear = new Date().getFullYear();
-  const minDate = `${currentYear}-01-01`;
-  const maxDate = `${currentYear}-12-31`;
+  const today = new Date();
+  const minDate = formatDate(today);
+  const maxYear = today.getFullYear() + 2;
+  const maxDate = `${maxYear}-12-31`;
   
   dateInputs.forEach(input => {
-    // Set min en max jaar
+    // Set min en max jaar (vanaf vandaag tot 2 jaar vooruit)
     input.setAttribute('min', minDate);
     input.setAttribute('max', maxDate);
     
