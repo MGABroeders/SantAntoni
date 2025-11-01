@@ -1,36 +1,740 @@
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;
-    background-color: #f7f8fa;
-    color: #333;
+    background: linear-gradient(to bottom, #e8f4f8, #f5f5f0);
+    background-color: #f5f5f0;
+    color: #2c3e50;
+    line-height: 1.6;
   }
   
   header {
-    background-color: #0066cc;
+    background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
     color: white;
-    padding: 1em;
+    padding: 1.5em;
     text-align: center;
+    box-shadow: 0 4px 15px rgba(30, 136, 229, 0.3);
+  }
+  
+  header h1 {
+    margin: 0 0 0.5em 0;
   }
   
   nav a {
     color: white;
-    margin: 0 10px;
+    margin: 0 15px;
     text-decoration: none;
     font-weight: bold;
+    transition: opacity 0.3s;
+  }
+  
+  nav a:hover {
+    opacity: 0.8;
+    text-decoration: underline;
   }
   
   section {
     padding: 2em;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  h2 {
+    color: #1565c0;
+    border-bottom: 3px solid #64b5f6;
+    padding-bottom: 0.5em;
+    margin-top: 0;
+  }
+  
+  h3 {
+    color: #1565c0;
   }
   
   .card {
     background: white;
-    padding: 1em;
+    padding: 1.5em;
     border-radius: 12px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     display: inline-block;
     margin: 1em;
-    width: 250px;
+    width: 280px;
     vertical-align: top;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  
+  .card img {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 8px;
+    background: #e0e0e0;
+  }
+  
+  /* Reserveringsformulier */
+  .reservation-form-container {
+    background: white;
+    padding: 2em;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 2em;
+  }
+  
+  .form-section h3 {
+    margin-top: 0;
+    color: #0066cc;
+  }
+  
+  .form-group {
+    margin-bottom: 1.5em;
+  }
+  
+  .form-group label {
+    display: block;
+    margin-bottom: 0.5em;
+    font-weight: bold;
+    color: #555;
+  }
+  
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    padding: 0.75em;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 1em;
+    font-family: inherit;
+    transition: border-color 0.3s;
+    box-sizing: border-box;
+  }
+  
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus {
+    outline: none;
+    border-color: #0066cc;
+  }
+  
+  .btn-primary {
+    background-color: #0066cc;
+    color: white;
+    padding: 0.75em 2em;
+    border: none;
+    border-radius: 8px;
+    font-size: 1em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  
+  .btn-primary:hover {
+    background-color: #0052a3;
+  }
+  
+  /* Kalender */
+  .calendar-section {
+    background: white;
+    padding: 2em;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 2em;
+  }
+  
+  .calendar-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5em;
+  }
+  
+  .calendar-controls h3 {
+    margin: 0;
+    color: #0066cc;
+  }
+  
+  .btn-nav {
+    background-color: #f0f0f0;
+    color: #333;
+    padding: 0.5em 1em;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.3s;
+  }
+  
+  .btn-nav:hover {
+    background-color: #e0e0e0;
+  }
+  
+  #calendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+  }
+  
+  .calendar-day {
+    background: #f9f9f9;
+    padding: 1em;
+    text-align: center;
+    border-radius: 6px;
+    min-height: 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border: 2px solid transparent;
+  }
+  
+  .calendar-day:hover {
+    background: #e8f4f8;
+  }
+  
+  .calendar-day.other-month {
+    opacity: 0.3;
+    cursor: default;
+  }
+  
+  .calendar-day.today {
+    background: #d4e8f7;
+    border-color: #0066cc;
+    font-weight: bold;
+  }
+  
+  .calendar-day.reserved {
+    background: #ffcccc;
+    border-color: #ff6666;
+  }
+  
+  .calendar-day.reserved-A {
+    background: #ffe6cc;
+    border-color: #ff9933;
+  }
+  
+  .calendar-day.reserved-B {
+    background: #ffccff;
+    border-color: #cc66cc;
+  }
+  
+  .calendar-day-number {
+    font-weight: bold;
+    margin-bottom: 4px;
+  }
+  
+  .calendar-day-label {
+    font-size: 0.75em;
+    color: #666;
+    font-weight: normal;
+  }
+  
+  .calendar-day-reservation {
+    font-size: 0.7em;
+    color: #555;
+    margin-top: 4px;
+    padding: 2px 4px;
+    background: rgba(255,255,255,0.7);
+    border-radius: 3px;
+  }
+  
+  .calendar-header {
+    text-align: center;
+    font-weight: bold;
+    padding: 0.5em;
+    background: #0066cc;
+    color: white;
+    border-radius: 6px;
+  }
+  
+  /* Reserveringen lijst */
+  .reservations-list {
+    background: white;
+    padding: 2em;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  }
+  
+  .reservations-list h3 {
+    margin-top: 0;
+    color: #0066cc;
+  }
+  
+  .reservation-item {
+    background: #f9f9f9;
+    padding: 1.5em;
+    margin-bottom: 1em;
+    border-radius: 8px;
+    border-left: 4px solid #0066cc;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  
+  .reservation-info {
+    flex: 1;
+    min-width: 250px;
+  }
+  
+  .reservation-info strong {
+    color: #0066cc;
+    display: block;
+    margin-bottom: 0.5em;
+    font-size: 1.1em;
+  }
+  
+  .reservation-dates {
+    color: #666;
+    margin: 0.5em 0;
+  }
+  
+  .reservation-app {
+    display: inline-block;
+    padding: 0.25em 0.75em;
+    background: #1565c0;
+    color: white;
+    border-radius: 12px;
+    font-size: 0.85em;
+    margin-top: 0.5em;
+    margin-right: 0.5em;
+  }
+  
+  .status-badge {
+    display: inline-block;
+    padding: 0.25em 0.75em;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: bold;
+  }
+  
+  .status-badge.pending {
+    background: #fff3cd;
+    color: #856404;
+  }
+  
+  .status-badge.approved {
+    background: #d4edda;
+    color: #155724;
+  }
+  
+  .status-badge.paid {
+    background: #cce5ff;
+    color: #004085;
+  }
+  
+  .reservation-actions {
+    margin-top: 1em;
+  }
+  
+  .btn-delete {
+    background-color: #dc3545;
+    color: white;
+    padding: 0.5em 1em;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.3s;
+  }
+  
+  .btn-delete:hover {
+    background-color: #c82333;
+  }
+  
+  .empty-state {
+    text-align: center;
+    padding: 2em;
+    color: #999;
+    font-style: italic;
+  }
+  
+  footer {
+    background-color: #333;
+    color: white;
+    text-align: center;
+    padding: 1.5em;
+    margin-top: 3em;
+  }
+  
+  /* Welcome Section */
+  .welcome-section {
+    text-align: center;
+    padding: 2em 1em;
+  }
+  
+  .intro-text {
+    font-size: 1.1em;
+    color: #555;
+    max-width: 800px;
+    margin: 1em auto 2em;
+    line-height: 1.8;
+  }
+  
+  .quick-links {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2em;
+    margin-top: 2em;
+  }
+  
+  .quick-link-card {
+    background: white;
+    padding: 2em;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 2px solid transparent;
+  }
+  
+  .quick-link-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(30, 136, 229, 0.2);
+    border-color: #64b5f6;
+  }
+  
+  .quick-link-card h3 {
+    margin-top: 0;
+    color: #1565c0;
+  }
+  
+  /* Appartementen Details */
+  .apartment-detail {
+    background: white;
+    padding: 2.5em;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    margin-bottom: 3em;
+  }
+  
+  .apartment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5em;
+    padding-bottom: 1em;
+    border-bottom: 2px solid #e0e0e0;
+  }
+  
+  .apartment-header h3 {
+    margin: 0;
+    font-size: 2em;
+    color: #1565c0;
+  }
+  
+  .apartment-badge {
+    background: linear-gradient(135deg, #64b5f6 0%, #42a5f5 100%);
+    color: white;
+    padding: 0.5em 1.5em;
+    border-radius: 20px;
+    font-size: 0.9em;
+    font-weight: bold;
+  }
+  
+  .apartment-content {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 3em;
+    margin-top: 2em;
+  }
+  
+  .apartment-image-container {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  }
+  
+  .apartment-main-image {
+    width: 100%;
+    height: 400px;
+    object-fit: cover;
+    display: block;
+  }
+  
+  .apartment-info h4 {
+    color: #1565c0;
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    font-size: 1.2em;
+  }
+  
+  .apartment-info p {
+    color: #555;
+    line-height: 1.8;
+    margin-bottom: 1em;
+  }
+  
+  .amenities-list {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5em;
+  }
+  
+  .amenities-list li {
+    padding: 0.5em 0;
+    color: #555;
+  }
+  
+  .btn-booking {
+    display: inline-block;
+    background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
+    color: white;
+    padding: 1em 2em;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+    margin-top: 1em;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  
+  .btn-booking:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(30, 136, 229, 0.3);
+  }
+  
+  /* Price Display */
+  .price-display {
+    background: #e3f2fd;
+    padding: 1em;
+    border-radius: 8px;
+    margin: 1em 0;
+    border-left: 4px solid #1565c0;
+  }
+  
+  .price-display strong {
+    color: #1565c0;
+    font-size: 1.2em;
+  }
+  
+  .price-display small {
+    display: block;
+    margin-top: 0.5em;
+    color: #666;
+  }
+  
+  /* Photo Gallery */
+  .photo-gallery {
+    background: white;
+    padding: 2em;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  }
+  
+  .gallery-tabs {
+    display: flex;
+    gap: 1em;
+    margin-bottom: 2em;
+    flex-wrap: wrap;
+  }
+  
+  .gallery-tab {
+    background: #e3f2fd;
+    border: 2px solid transparent;
+    padding: 0.75em 1.5em;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    color: #1565c0;
+    transition: all 0.3s;
+  }
+  
+  .gallery-tab:hover {
+    background: #bbdefb;
+  }
+  
+  .gallery-tab.active {
+    background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
+    color: white;
+    border-color: #1565c0;
+  }
+  
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1.5em;
+  }
+  
+  .gallery-item {
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px;
+    aspect-ratio: 4/3;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: transform 0.3s;
+  }
+  
+  .gallery-item:hover {
+    transform: scale(1.05);
+  }
+  
+  .gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  
+  .gallery-item.hidden {
+    display: none;
+  }
+  
+  /* Lightbox */
+  .lightbox {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.9);
+    cursor: pointer;
+  }
+  
+  .lightbox.active {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .lightbox-image {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+    border-radius: 8px;
+  }
+  
+  .lightbox-close {
+    position: absolute;
+    top: 20px;
+    right: 35px;
+    color: #f1f1f1;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  
+  .lightbox-close:hover {
+    color: white;
+  }
+  
+  /* Messages Section */
+  .messages-section {
+    background: white;
+    padding: 2em;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  }
+  
+  .new-message-form {
+    background: #f8f9fa;
+    padding: 2em;
+    border-radius: 8px;
+    margin-bottom: 2em;
+  }
+  
+  .new-message-form h3 {
+    margin-top: 0;
+  }
+  
+  .messages-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5em;
+  }
+  
+  .message-item {
+    background: #f8f9fa;
+    padding: 1.5em;
+    border-radius: 8px;
+    border-left: 4px solid #64b5f6;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  
+  .message-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5em;
+  }
+  
+  .message-author {
+    font-weight: bold;
+    color: #1565c0;
+  }
+  
+  .message-date {
+    color: #999;
+    font-size: 0.9em;
+  }
+  
+  .message-text {
+    color: #555;
+    line-height: 1.6;
+    white-space: pre-wrap;
+  }
+  
+  /* Contact Section */
+  .contact-section {
+    background: white;
+    padding: 2em;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  }
+  
+  .contact-info {
+    margin-top: 1.5em;
+  }
+  
+  .contact-info a {
+    color: #1565c0;
+    text-decoration: none;
+  }
+  
+  .contact-info a:hover {
+    text-decoration: underline;
+  }
+  
+  /* Responsive */
+  @media (max-width: 768px) {
+    section {
+      padding: 1em;
+    }
+    
+    .calendar-controls {
+      flex-direction: column;
+      gap: 1em;
+    }
+    
+    .reservation-item {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    
+    .apartment-content {
+      grid-template-columns: 1fr;
+    }
+    
+    .amenities-list {
+      grid-template-columns: 1fr;
+    }
+    
+    .quick-links {
+      grid-template-columns: 1fr;
+    }
+    
+    .gallery-grid {
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
   }
   
