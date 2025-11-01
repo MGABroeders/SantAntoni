@@ -396,12 +396,13 @@ async function syncMessagesFromFirebase() {
   }
 }
 
-function addMessage(author, text) {
+function addMessage(author, text, userId) {
   const message = {
     id: Date.now().toString(),
     author,
     text,
-    date: new Date().toISOString()
+    date: new Date().toISOString(),
+    userId: userId || null // Voor het kunnen verwijderen van eigen berichten
   };
   
   const messages = getMessages();
@@ -413,6 +414,12 @@ function addMessage(author, text) {
   
   saveMessages(messages);
   return message;
+}
+
+function deleteMessage(messageId) {
+  const messages = getMessages();
+  const filtered = messages.filter(m => m.id !== messageId);
+  saveMessages(filtered);
 }
 
 function subscribeToMessages(callback) {

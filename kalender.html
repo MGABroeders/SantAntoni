@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kalender & Reserveringen - Familie Sant Antoni</title>
+  <title>Reserveringen - Familie Sant Antoni</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -23,32 +23,42 @@
     <nav id="mainNav" class="main-nav">
       <a href="index.html">Home</a>
       <a href="appartementen.html">Appartementen</a>
-      <a href="kalender.html">Kalender</a>
+      <a href="kalender.html">Reserveren</a>
       <a href="fotos.html">Foto's</a>
       <a href="berichten.html">Berichten</a>
     </nav>
   </header>
 
   <section id="kalender">
-    <h2>Kalender & Reserveringen</h2>
+    <h2>Reserveringen</h2>
     
     <div class="reservation-form-container">
       <div class="form-section">
         <h3>Nieuwe Reservering</h3>
+        
+        <!-- Pre-filled info (read-only when logged in) -->
+        <div id="userInfo" class="user-info-display" style="display: none;">
+          <div class="info-row"><strong>Naam:</strong> <span id="userName"></span></div>
+          <div class="info-row"><strong>Email:</strong> <span id="userEmail"></span></div>
+          <div class="info-row"><strong>Appartement:</strong> <span id="userAppartment"></span></div>
+          <div class="info-row"><strong>Aankomst:</strong> <span id="userAankomst"></span></div>
+          <div class="info-row"><strong>Vertrek:</strong> <span id="userVertrek"></span></div>
+        </div>
+        
         <form id="reservationForm">
           <div class="form-group">
             <label for="appartement">Appartement:</label>
             <select id="appartement" required>
               <option value="">Selecteer appartement</option>
-              <option value="A">Appartement A</option>
-              <option value="B">Appartement B</option>
+              <option value="A">Appartement 35</option>
+              <option value="B">Appartement 36</option>
             </select>
           </div>
-          <div class="form-group">
+          <div class="form-group" id="naamField">
             <label for="naam">Naam:</label>
             <input type="text" id="naam" required placeholder="Vul je naam in">
           </div>
-          <div class="form-group">
+          <div class="form-group" id="emailField">
             <label for="email">E-mailadres:</label>
             <input type="email" id="email" required placeholder="jouw@email.nl">
           </div>
@@ -68,22 +78,16 @@
             <label for="opmerking">Opmerkingen (optioneel):</label>
             <textarea id="opmerking" rows="3" placeholder="Extra informatie..."></textarea>
           </div>
+          
+          <!-- Price breakdown -->
           <div id="priceDisplay" class="price-display" style="display: none;">
-            <strong>Geschatte prijs: €<span id="calculatedPrice">0</span></strong>
-            <small id="priceBreakdown"></small>
+            <h4>Prijs overzicht</h4>
+            <div id="priceBreakdown"></div>
           </div>
+          
           <button type="submit" class="btn-primary">Reservering aanvragen</button>
         </form>
       </div>
-    </div>
-
-    <div class="calendar-section">
-      <div class="calendar-controls">
-        <button id="prevMonth" class="btn-nav">← Vorige</button>
-        <h3 id="currentMonth"></h3>
-        <button id="nextMonth" class="btn-nav">Volgende →</button>
-      </div>
-      <div id="calendar"></div>
     </div>
 
     <div class="reservations-list">
@@ -96,9 +100,68 @@
     <p>&copy; 2025 Familie Sant Antoni</p>
   </footer>
 
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  
+  <!-- Firebase Config & Data Layer -->
+  <script src="firebase-config.js"></script>
+  <script src="firebase-db.js"></script>
+  
+  <!-- App Scripts -->
   <script src="auth.js"></script>
   <script src="auth-ui.js"></script>
   <script src="script.js"></script>
+  
+  <!-- Initialize Firebase -->
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      if (typeof initFirebase === 'function') {
+        initFirebase();
+        
+        // Start syncing na 2 seconden (geeft Firebase tijd om te laden)
+        setTimeout(() => {
+          if (typeof syncReservationsFromFirebase === 'function') {
+            syncReservationsFromFirebase().then(() => {
+              console.log('Reserveringen gesynchroniseerd van Firebase');
+              // Herlaad kalender als die bestaat
+              if (typeof generateCalendar === 'function') {
+                generateCalendar();
+              }
+            });
+          }
+          
+          if (typeof syncMessagesFromFirebase === 'function') {
+            syncMessagesFromFirebase().then(() => {
+              console.log('Berichten gesynchroniseerd van Firebase');
+              if (typeof displayMessages === 'function') {
+                displayMessages();
+              }
+            });
+          }
+        }, 2000);
+        
+        // Sync elke 5 seconden
+        setInterval(() => {
+          if (typeof syncReservationsFromFirebase === 'function') {
+            syncReservationsFromFirebase().then(() => {
+              if (typeof generateCalendar === 'function') {
+                generateCalendar();
+              }
+            });
+          }
+          if (typeof syncMessagesFromFirebase === 'function') {
+            syncMessagesFromFirebase().then(() => {
+              if (typeof displayMessages === 'function') {
+                displayMessages();
+              }
+            });
+          }
+        }, 5000);
+      }
+    });
+  </script>
 </body>
 </html>
 

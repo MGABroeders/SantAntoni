@@ -32,6 +32,12 @@ const dagNamenVolledig = ['Zondag', 'Maandag', 'Dinsdag', 'Woensdag', 'Donderdag
 let currentMonth = new Date().getMonth();
 let currentYear = new Date().getFullYear();
 
+// Selectie state voor kalender
+const selectionState = {
+  A: { startDate: null, endDate: null },
+  B: { startDate: null, endDate: null }
+};
+
 // Functies voor data management worden nu gehandeld door firebase-db.js
 // Deze localStorage versies blijven als fallback maar worden overschreven door firebase-db.js functies
 
@@ -70,11 +76,12 @@ function calculatePrice(apartement, aankomst, vertrek) {
     return acc;
   }, {});
   
-  const breakdownText = Object.values(grouped)
+  const breakdownItems = Object.values(grouped);
+  const breakdownText = breakdownItems
     .map(g => `${g.count} nacht(en) ${g.naam} @ €${g.prijs}/nacht`)
     .join(', ');
   
-  return { total, nights, breakdown: breakdownText };
+  return { total, nights, breakdown: breakdownText, breakdownItems: breakdownItems };
 }
 
 function getSeizoenNaam(seizoen) {
@@ -227,6 +234,37 @@ function generateCalendarForApartment(apartment) {
      dayNumber.textContent = date.getDate();
      dayDiv.appendChild(dayNumber);
      
+     // Check selectie state voor dit appartement
+     if (apartment) {
+       const selection = selectionState[apartment];
+       const dateStr = formatDate(date);
+       const isStart = selection.startDate && formatDate(selection.startDate) === dateStr;
+       const isEnd = selection.endDate && formatDate(selection.endDate) === dateStr;
+       const isInRange = selection.startDate && selection.endDate && 
+                        date > new Date(selection.startDate) && 
+                        date < new Date(selection.endDate);
+       
+       if (isStart) {
+         dayDiv.classList.add('selected-start');
+       }
+       
+       if (isEnd) {
+         dayDiv.classList.add('selected-end');
+       }
+       
+       if (isInRange) {
+         dayDiv.classList.add('selected-range');
+       }
+       
+       // Alleen clickable als niet gereserveerd
+       if (!isReserved && isCurrentMonth) {
+         dayDiv.classList.add('clickable');
+         dayDiv.style.cursor = 'pointer';
+         dayDiv.dataset.date = dateStr;
+         dayDiv.addEventListener('click', () => handleDateClick(date, apartment));
+       }
+     }
+     
      // Voeg hover en click handlers toe voor reserveringen
      if (dateReservations.length > 0 && isCurrentMonth) {
        const res = dateReservations[0]; // Neem eerste reservering
@@ -243,22 +281,114 @@ function generateCalendarForApartment(apartment) {
        dayDiv.setAttribute('title', `${res.naam}`);
        dayDiv.classList.add('has-reservation');
        
-       // Click handler
-       dayDiv.style.cursor = 'pointer';
-       dayDiv.addEventListener('click', (e) => {
-         e.preventDefault();
-         alert(`Al geboekt door ${res.naam}\n\n` +
-               `Van: ${formatDisplayDate(resStart)}\n` +
-               `Tot: ${formatDisplayDate(resEnd)}\n` +
-               `Aantal personen: ${res.personen}\n` +
-               `Appartement: ${res.appartement}\n` +
-               `Status: ${res.status === 'goedgekeurd' ? 'Goedgekeurd' : res.status === 'in_afwachting' ? 'In afwachting' : 'Betaald'}`);
-       });
+       // Click handler voor reserverings details
+       if (!apartment) { // Alleen op single calendar pagina
+         dayDiv.style.cursor = 'pointer';
+         dayDiv.addEventListener('click', (e) => {
+           e.preventDefault();
+           alert(`Al geboekt door ${res.naam}\n\n` +
+                 `Van: ${formatDisplayDate(resStart)}\n` +
+                 `Tot: ${formatDisplayDate(resEnd)}\n` +
+                 `Aantal personen: ${res.personen}\n` +
+                 `Appartement: ${res.appartement}\n` +
+                 `Status: ${res.status === 'goedgekeurd' ? 'Goedgekeurd' : res.status === 'in_afwachting' ? 'In afwachting' : 'Betaald'}`);
+         });
+       }
      }
      
      calendar.appendChild(dayDiv);
    }
  }
+
+// Handle klik op datum voor selectie
+function handleDateClick(date, apartment) {
+  const selection = selectionState[apartment];
+  
+  // Als geen start datum, maak dit de start
+  if (!selection.startDate) {
+    selection.startDate = date;
+    generateCalendarForApartment(apartment);
+    updateReserveButton(apartment);
+  }
+  // Als start datum maar geen end, maak dit de end (moet na start zijn)
+  else if (!selection.endDate) {
+    if (date > selection.startDate) {
+      selection.endDate = date;
+      generateCalendarForApartment(apartment);
+      updateReserveButton(apartment);
+    } else {
+      // Nieuwe start datum
+      selection.startDate = date;
+      selection.endDate = null;
+      generateCalendarForApartment(apartment);
+      updateReserveButton(apartment);
+    }
+  }
+  // Als beide datums, reset en maak nieuwe start
+  else {
+    selection.startDate = date;
+    selection.endDate = null;
+    generateCalendarForApartment(apartment);
+    updateReserveButton(apartment);
+  }
+}
+
+// Update reserve button tekst en state
+function updateReserveButton(apartment) {
+  const btn = document.querySelector(`.btn-reserve[data-apartment="${apartment}"]`);
+  const startInput = document.querySelector(`.date-input[data-apartment="${apartment}"][data-role="start"]`);
+  const endInput = document.querySelector(`.date-input[data-apartment="${apartment}"][data-role="end"]`);
+  
+  if (!btn || !startInput || !endInput) return;
+  
+  const selection = selectionState[apartment];
+  
+  // Update inputs
+  if (selection.startDate) {
+    startInput.value = formatDate(selection.startDate);
+  } else {
+    startInput.value = '';
+  }
+  
+  if (selection.endDate) {
+    endInput.value = formatDate(selection.endDate);
+  } else {
+    endInput.value = '';
+  }
+  
+  // Update button
+  if (selection.startDate && selection.endDate) {
+    btn.textContent = 'Reserveren';
+    btn.disabled = false;
+  } else {
+    btn.textContent = 'Reserveren';
+    btn.disabled = true;
+  }
+}
+
+// Handle reserveer klik
+function handleReserveClick(apartment) {
+  const selection = selectionState[apartment];
+  
+  if (!selection.startDate || !selection.endDate) {
+    alert('Selecteer eerst een start- en einddatum');
+    return;
+  }
+  
+  // Redirect naar kalender pagina met pre-filled data
+  const apartmentName = apartment === 'A' ? '35' : '36';
+  const start = formatDate(selection.startDate);
+  const end = formatDate(selection.endDate);
+  
+  // Redirect naar kalender pagina met URL params of sessionStorage
+  sessionStorage.setItem('pendingReservation', JSON.stringify({
+    appartement: apartmentName,
+    aankomst: start,
+    vertrek: end
+  }));
+  
+  window.location.href = 'kalender.html';
+}
 
 // Kalender genereren (wrapper functie)
 function generateCalendar() {
@@ -271,6 +401,8 @@ function generateCalendar() {
     // Twee kalenders naast elkaar (home pagina)
     generateCalendarForApartment('A');
     generateCalendarForApartment('B');
+    updateReserveButton('A');
+    updateReserveButton('B');
     
     // Update maand header
     const monthHeader = document.getElementById('currentMonth');
@@ -295,6 +427,10 @@ function displayReservations() {
     return;
   }
   
+  // Check if current user is admin
+  const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+  const userIsAdmin = user && typeof isAdmin === 'function' ? isAdmin() : false;
+  
   container.innerHTML = reservations.map(res => {
     const aankomst = new Date(res.aankomst).toLocaleDateString('nl-NL');
     const vertrek = new Date(res.vertrek).toLocaleDateString('nl-NL');
@@ -304,14 +440,16 @@ function displayReservations() {
       ? '<span class="status-badge paid">€ Betaald</span>'
       : '<span class="status-badge pending">⏳ In afwachting</span>';
     
+    // Only show delete button for admin
+    const deleteButton = userIsAdmin ? `<button class="btn-delete" onclick="handleDeleteReservation('${res.id}')">Verwijderen</button>` : '';
+    
     return `
       <div class="reservation-item">
         <div class="reservation-info">
-          <strong>${res.naam}${res.email ? ` (${res.email})` : ''}</strong>
+          <strong>${res.naam}</strong>
           <div class="reservation-dates">
             ${aankomst} - ${vertrek} ${res.personen ? `(${res.personen} persoon${res.personen > 1 ? 'en' : ''})` : ''}
           </div>
-          ${res.prijs ? `<div style="margin-top: 0.5em; font-weight: bold; color: #1565c0;">€${res.prijs.toFixed(2)}</div>` : ''}
           ${res.opmerking ? `<div style="margin-top: 0.5em; color: #666; font-style: italic;">${res.opmerking}</div>` : ''}
           <div style="margin-top: 0.5em;">
             <span class="reservation-app">Appartement ${res.appartement}</span>
@@ -319,7 +457,7 @@ function displayReservations() {
           </div>
         </div>
         <div class="reservation-actions">
-          <button class="btn-delete" onclick="handleDeleteReservation('${res.id}')">Verwijderen</button>
+          ${deleteButton}
         </div>
       </div>
     `;
@@ -358,9 +496,8 @@ function updateReservationForm() {
   const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
   const loginPrompt = document.getElementById('loginPrompt');
   const userInfo = document.getElementById('userInfo');
-  const nameField = document.getElementById('nameField');
+  const nameField = document.getElementById('naamField');
   const emailField = document.getElementById('emailField');
-  const currentUserInfo = document.getElementById('currentUserInfo');
   const reservationForm = document.getElementById('reservationForm');
   
   if (!reservationForm) return; // Not on calendar page
@@ -382,17 +519,50 @@ function updateReservationForm() {
     if (loginPrompt) loginPrompt.style.display = 'none';
     if (userInfo) {
       userInfo.style.display = 'block';
-      if (currentUserInfo) {
-        currentUserInfo.innerHTML = `<strong>${user.name}</strong> (${user.email})`;
+      // Update user info display
+      const userName = document.getElementById('userName');
+      const userEmail = document.getElementById('userEmail');
+      const userAppartment = document.getElementById('userAppartment');
+      const userAankomst = document.getElementById('userAankomst');
+      const userVertrek = document.getElementById('userVertrek');
+      
+      if (userName) userName.textContent = user.name;
+      if (userEmail) userEmail.textContent = user.email;
+      if (userAppartment) {
+        const aptSelect = document.getElementById('appartement');
+        if (aptSelect && aptSelect.value) {
+          const aptName = aptSelect.selectedOptions[0].text;
+          userAppartment.textContent = aptName;
+        } else {
+          userAppartment.textContent = '-';
+        }
+      }
+      if (userAankomst) {
+        const aankomstInput = document.getElementById('aankomst');
+        if (aankomstInput && aankomstInput.value) {
+          userAankomst.textContent = aankomstInput.value;
+        } else {
+          userAankomst.textContent = '-';
+        }
+      }
+      if (userVertrek) {
+        const vertrekInput = document.getElementById('vertrek');
+        if (vertrekInput && vertrekInput.value) {
+          userVertrek.textContent = vertrekInput.value;
+        } else {
+          userVertrek.textContent = '-';
+        }
       }
     }
     if (nameField) {
       nameField.style.display = 'none';
-      nameField.querySelector('input').required = false;
+      const input = nameField.querySelector('input');
+      if (input) input.required = false;
     }
     if (emailField) {
       emailField.style.display = 'none';
-      emailField.querySelector('input').required = false;
+      const input = emailField.querySelector('input');
+      if (input) input.required = false;
     }
     reservationForm.style.opacity = '1';
     reservationForm.style.pointerEvents = 'auto';
@@ -409,15 +579,50 @@ document.addEventListener('DOMContentLoaded', () => {
   if (calendarA || calendarB || singleCalendar) {
     generateCalendar();
   }
+  
+  // Reserveer knoppen event listeners
+  const reserveButtons = document.querySelectorAll('.btn-reserve');
+  reserveButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const apartment = btn.dataset.apartment;
+      handleReserveClick(apartment);
+    });
+  });
+  
+  // Date input event listeners
+  const dateInputs = document.querySelectorAll('.date-input');
+  const currentYear = new Date().getFullYear();
+  const minDate = `${currentYear}-01-01`;
+  const maxDate = `${currentYear}-12-31`;
+  
+  dateInputs.forEach(input => {
+    // Set min en max jaar
+    input.setAttribute('min', minDate);
+    input.setAttribute('max', maxDate);
+    
+    input.addEventListener('change', () => {
+      const apartment = input.dataset.apartment;
+      const role = input.dataset.role;
+      const value = input.value;
+      
+      if (value) {
+        const date = new Date(value);
+        if (role === 'start') {
+          selectionState[apartment].startDate = date;
+          generateCalendarForApartment(apartment);
+          updateReserveButton(apartment);
+        } else if (role === 'end') {
+          selectionState[apartment].endDate = date;
+          generateCalendarForApartment(apartment);
+          updateReserveButton(apartment);
+        }
+      }
+    });
+  });
+  
   if (document.getElementById('reservationsList')) {
     displayReservations();
   }
-  
-  // Update reservation form
-  updateReservationForm();
-  
-  // Re-check after auth loads
-  setTimeout(updateReservationForm, 100);
   
   // Stel minimale datum in (vandaag) - alleen op kalender pagina
   const aankomstInput = document.getElementById('aankomst');
@@ -441,8 +646,15 @@ document.addEventListener('DOMContentLoaded', () => {
       
       if (appartement && aankomst && vertrek && new Date(aankomst) < new Date(vertrek)) {
         const priceInfo = calculatePrice(appartement, aankomst, vertrek);
-        document.getElementById('calculatedPrice').textContent = priceInfo.total.toFixed(2);
-        document.getElementById('priceBreakdown').textContent = priceInfo.breakdown;
+        
+        // Build detailed breakdown list
+        const breakdownContainer = document.getElementById('priceBreakdown');
+        if (breakdownContainer && priceInfo.breakdownItems) {
+          breakdownContainer.innerHTML = priceInfo.breakdownItems.map(item => 
+            `<div>${item.count}x ${item.naam} = €${(item.count * item.prijs).toFixed(2)}</div>`
+          ).join('') + `<div><strong>Totaal = €${priceInfo.total.toFixed(2)}</strong></div>`;
+        }
+        
         priceDisplay.style.display = 'block';
       } else {
         priceDisplay.style.display = 'none';
@@ -465,18 +677,61 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         updatePrice();
+        updateReservationForm(); // Update user info display
       });
     }
     
     const vertrekInput = document.getElementById('vertrek');
     if (vertrekInput) {
-      vertrekInput.addEventListener('change', updatePrice);
+      vertrekInput.addEventListener('change', () => {
+        updatePrice();
+        updateReservationForm(); // Update user info display
+      });
     }
     
     const appartementSelect = document.getElementById('appartement');
     if (appartementSelect) {
-      appartementSelect.addEventListener('change', updatePrice);
+      appartementSelect.addEventListener('change', () => {
+        updatePrice();
+        updateReservationForm(); // Update user info display
+      });
     }
+    
+    // Load pending reservation from sessionStorage
+    const pendingReservation = sessionStorage.getItem('pendingReservation');
+    if (pendingReservation) {
+      try {
+        const data = JSON.parse(pendingReservation);
+        const appartement = document.getElementById('appartement');
+        const aankomstInput = document.getElementById('aankomst');
+        const vertrekInput = document.getElementById('vertrek');
+        
+        if (appartement && aankomstInput && vertrekInput) {
+          // Map appartement nummer naar letter
+          const apartmentMap = { '35': 'A', '36': 'B' };
+          const aptLetter = apartmentMap[data.appartement] || 'A';
+          
+          appartement.value = aptLetter;
+          if (data.aankomst) aankomstInput.value = data.aankomst;
+          if (data.vertrek) vertrekInput.value = data.vertrek;
+          
+          // Clear session storage
+          sessionStorage.removeItem('pendingReservation');
+          
+          // Trigger price calculation and update form
+          updatePrice();
+          updateReservationForm();
+        }
+      } catch (e) {
+        console.error('Error loading pending reservation:', e);
+      }
+    }
+    
+    // Initial update of reservation form
+    updateReservationForm();
+    
+    // Re-check after auth loads
+    setTimeout(updateReservationForm, 100);
   }
   
   // Formulier submit - alleen op kalender pagina
@@ -713,7 +968,7 @@ function initMessages() {
       const text = document.getElementById('messageText').value;
       
       if (text) {
-        addMessage(author, text);
+        addMessage(author, text, user.id);
         displayMessages();
         messageForm.reset();
         updateMessageForm(); // Re-update form
@@ -731,6 +986,9 @@ function displayMessages() {
     return;
   }
   
+  const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+  const userIsAdmin = user && typeof isAdmin === 'function' ? isAdmin() : false;
+  
   container.innerHTML = messages.map(msg => {
     const date = new Date(msg.date).toLocaleDateString('nl-NL', {
       year: 'numeric',
@@ -740,14 +998,33 @@ function displayMessages() {
       minute: '2-digit'
     });
     
+    // Toon verwijder knop als eigenaar of admin
+    const canDelete = user && (msg.userId === user.id || userIsAdmin);
+    const deleteButton = canDelete 
+      ? `<button class="delete-message-btn" data-message-id="${msg.id}" title="Verwijderen">×</button>` 
+      : '';
+    
     return `
       <div class="message-item">
         <div class="message-header">
           <span class="message-author">${msg.author}</span>
           <span class="message-date">${date}</span>
+          ${deleteButton}
         </div>
         <div class="message-text">${msg.text}</div>
       </div>
     `;
   }).join('');
+  
+  // Voeg event listeners toe aan delete knoppen
+  setTimeout(() => {
+    const deleteButtons = container.querySelectorAll('.delete-message-btn');
+    deleteButtons.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const messageId = this.dataset.messageId;
+        deleteMessage(messageId);
+        displayMessages();
+      });
+    });
+  }, 0);
 }
