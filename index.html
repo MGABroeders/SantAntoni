@@ -140,6 +140,47 @@
     window.addEventListener('DOMContentLoaded', () => {
       if (typeof initFirebase === 'function') {
         initFirebase();
+        
+        // Start syncing na 2 seconden (geeft Firebase tijd om te laden)
+        setTimeout(() => {
+          if (typeof syncReservationsFromFirebase === 'function') {
+            syncReservationsFromFirebase().then(() => {
+              console.log('Reserveringen gesynchroniseerd van Firebase');
+              // Herlaad kalender als die bestaat
+              if (typeof generateCalendar === 'function') {
+                generateCalendar();
+              }
+            });
+          }
+          
+          if (typeof syncMessagesFromFirebase === 'function') {
+            syncMessagesFromFirebase().then(() => {
+              console.log('Berichten gesynchroniseerd van Firebase');
+              // Herlaad berichten als die bestaan
+              if (typeof displayMessages === 'function') {
+                displayMessages();
+              }
+            });
+          }
+        }, 2000);
+        
+        // Sync elke 5 seconden
+        setInterval(() => {
+          if (typeof syncReservationsFromFirebase === 'function') {
+            syncReservationsFromFirebase().then(() => {
+              if (typeof generateCalendar === 'function') {
+                generateCalendar();
+              }
+            });
+          }
+          if (typeof syncMessagesFromFirebase === 'function') {
+            syncMessagesFromFirebase().then(() => {
+              if (typeof displayMessages === 'function') {
+                displayMessages();
+              }
+            });
+          }
+        }, 5000);
       }
     });
   </script>

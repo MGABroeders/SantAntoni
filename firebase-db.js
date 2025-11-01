@@ -233,14 +233,15 @@ async function initProefReserveringen() {
 // Sla reserveringen op (sync versie)
 function saveReservations(reservations) {
   localStorage.setItem('santantoni_reservations', JSON.stringify(reservations));
+  
+  // Sync naar Firebase als beschikbaar
+  if (isFirebaseReady()) {
+    syncReservationsToFirebase(reservations).catch(err => console.error('Firebase sync fout:', err));
+  }
 }
 
-// Async versie van saveReservations
-async function saveReservationsAsync(reservations) {
-  if (useLocalStorage()) {
-    return saveReservations(reservations);
-  }
-  
+// Sync reserveringen naar Firebase
+async function syncReservationsToFirebase(reservations) {
   try {
     const batch = firebaseDB.batch();
     const snapshot = await firebaseDB.collection('reservations').get();
@@ -255,8 +256,33 @@ async function saveReservationsAsync(reservations) {
     await batch.commit();
   } catch (error) {
     console.error('Firebase fout bij opslaan reserveringen:', error);
-    saveReservations(reservations);
   }
+}
+
+// Haal reserveringen op van Firebase en merge met localStorage
+async function syncReservationsFromFirebase() {
+  if (!isFirebaseReady()) return;
+  
+  try {
+    const snapshot = await firebaseDB.collection('reservations').orderBy('created', 'desc').get();
+    const reservations = [];
+    snapshot.forEach(doc => {
+      reservations.push({ id: doc.id, ...doc.data() });
+    });
+    
+    localStorage.setItem('santantoni_reservations', JSON.stringify(reservations));
+  } catch (error) {
+    console.error('Firebase ophalen fout voor reserveringen:', error);
+  }
+}
+
+// Async versie van saveReservations (legacy)
+async function saveReservationsAsync(reservations) {
+  if (useLocalStorage()) {
+    return saveReservations(reservations);
+  }
+  
+  return syncReservationsToFirebase(reservations);
 }
 
 // Voeg reservering toe (sync versie)
@@ -316,6 +342,51 @@ function getMessages() {
 
 function saveMessages(messages) {
   localStorage.setItem('santantoni_messages', JSON.stringify(messages));
+  
+  // Sync naar Firebase als beschikbaar
+  if (isFirebaseReady()) {
+    syncMessagesToFirebase(messages).catch(err => console.error('Firebase sync fout:', err));
+  }
+}
+
+// Sync berichten naar Firebase
+async function syncMessagesToFirebase(messages) {
+  try {
+    const batch = firebaseDB.batch();
+    
+    // Verwijder oude berichten
+    const snapshot = await firebaseDB.collection('messages').get();
+    snapshot.forEach(doc => batch.delete(doc.ref));
+    
+    // Voeg nieuwe toe
+    messages.forEach(msg => {
+      const docRef = firebaseDB.collection('messages').doc(msg.id);
+      const { id, ...data } = msg;
+      batch.set(docRef, data);
+    });
+    
+    await batch.commit();
+  } catch (error) {
+    console.error('Firebase sync fout voor berichten:', error);
+  }
+}
+
+// Haal berichten op van Firebase en merge met localStorage
+async function syncMessagesFromFirebase() {
+  if (!isFirebaseReady()) return;
+  
+  try {
+    const snapshot = await firebaseDB.collection('messages').orderBy('date', 'desc').get();
+    const messages = [];
+    snapshot.forEach(doc => {
+      messages.push({ id: doc.id, ...doc.data() });
+    });
+    
+    // Update localStorage
+    localStorage.setItem('santantoni_messages', JSON.stringify(messages));
+  } catch (error) {
+    console.error('Firebase ophalen fout voor berichten:', error);
+  }
 }
 
 function addMessage(author, text) {
