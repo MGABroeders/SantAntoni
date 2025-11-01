@@ -45,32 +45,89 @@ function loadUsers() {
     }
   }
   
-  // Display approved
-  const approvedContainer = document.getElementById('approvedUsers');
-  if (approvedContainer) {
-    if (approved.length === 0) {
-      approvedContainer.innerHTML = '<p class="empty-state">Geen goedgekeurde gebruikers</p>';
-    } else {
-      approvedContainer.innerHTML = approved.map(user => `
-        <div class="user-item">
-          <div class="user-info">
-            <strong>${user.name} ${user.role === 'admin' ? '(Admin)' : ''}</strong>
-            <div>${user.email}</div>
-            <div style="font-size: 0.9em; color: #666;">
-              Familie: ${user.family || 'Geen'} | 
-              Rang: ${user.rank || 'Geen'} | 
-              Boekingsrechten: ${user.settings?.canBook ? '✅ Ja' : '❌ Nee'} | 
-              Max/jaar: ${user.settings?.maxReservationsPerYear || 5} | 
-              Prioriteit: ${user.settings?.priority || 'normal'}
-            </div>
-          </div>
-          <div class="user-actions">
-            <button class="btn-secondary" onclick="editUserSettings('${user.id}')">Instellingen</button>
-            ${user.role !== 'admin' ? `<button class="btn-delete" onclick="deleteUserById('${user.id}')">Verwijderen</button>` : ''}
-          </div>
+  // Display approved in family columns
+  const familyAContainer = document.getElementById('familyAUsers');
+  const familyBContainer = document.getElementById('familyBUsers');
+  const noFamilyContainer = document.getElementById('noFamilyUsers');
+  
+  const familyA = approved.filter(u => u.family === 'A');
+  const familyB = approved.filter(u => u.family === 'B');
+  const noFamily = approved.filter(u => !u.family || u.family === '');
+  
+  if (familyAContainer) {
+    familyAContainer.innerHTML = familyA.map(user => createDraggableUserItem(user)).join('');
+  }
+  
+  if (familyBContainer) {
+    familyBContainer.innerHTML = familyB.map(user => createDraggableUserItem(user)).join('');
+  }
+  
+  if (noFamilyContainer) {
+    noFamilyContainer.innerHTML = noFamily.map(user => createDraggableUserItem(user)).join('');
+  }
+}
+
+// Create draggable user item HTML
+function createDraggableUserItem(user) {
+  return `
+    <div class="family-user-item" draggable="true" ondragstart="dragUser(event)" data-user-id="${user.id}">
+      <div class="family-user-info">
+        <div>
+          <strong>${user.name} ${user.role === 'admin' ? '(Admin)' : ''}</strong>
+          <div class="family-user-details">${user.email}</div>
         </div>
-      `).join('');
+      </div>
+      <div class="family-user-details" style="margin-top: 0.5em;">
+        Rang: ${user.rank || 'Geen'} | 
+        Boekingsrechten: ${user.settings?.canBook ? '✅' : '❌'} | 
+        Max/jaar: ${user.settings?.maxReservationsPerYear || 5}
+      </div>
+      <button class="btn-secondary" style="margin-top: 0.5em; width: 100%;" onclick="event.stopPropagation(); editUserSettings('${user.id}')">Instellingen</button>
+    </div>
+  `;
+}
+
+// Drag and drop handlers
+function allowDrop(ev) {
+  ev.preventDefault();
+  ev.currentTarget.classList.add('drag-over');
+}
+
+function dragUser(ev) {
+  const userItem = ev.target.closest('.family-user-item');
+  if (userItem) {
+    ev.dataTransfer.setData('text/plain', userItem.dataset.userId);
+    userItem.classList.add('dragging');
+  }
+}
+
+function dropUser(ev) {
+  ev.preventDefault();
+  ev.currentTarget.classList.remove('drag-over');
+  
+  const userId = ev.dataTransfer.getData('text/plain');
+  const targetFamily = ev.currentTarget.dataset.family;
+  const draggingElement = document.querySelector('.family-user-item.dragging');
+  
+  if (draggingElement) {
+    draggingElement.classList.remove('dragging');
+  }
+  
+  // Update user in database
+  const users = getUsers();
+  const user = users.find(u => u.id === userId);
+  if (user) {
+    user.family = targetFamily || null;
+    saveUsers(users);
+    
+    // Update current user if it's the same user
+    const currentUser = getCurrentUser();
+    if (currentUser && currentUser.id === userId) {
+      setCurrentUser(user);
     }
+    
+    // Reload
+    loadUsers();
   }
 }
 

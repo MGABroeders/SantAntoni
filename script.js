@@ -345,8 +345,36 @@ function generateCalendarForApartment(apartment) {
          dayDiv.classList.add('selected-range');
        }
        
-       // Alleen clickable als niet gereserveerd
-       if (!isReserved && isCurrentMonth) {
+       // Check overlay voor data waar je nog niet mag reserveren
+       const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+       let isDisabledBooking = false;
+       
+       if (user && user.family && isCurrentMonth && !isReserved) {
+         const maand = date.getMonth();
+         
+         // Voor zomermaanden (juni-september) check familie voorrang
+         if (maand >= 5 && maand <= 8) {
+           const year = date.getFullYear();
+           const priorityFamily = getPriorityFamilyForMonth(maand, year, apartment);
+           const today = new Date();
+           const isPreseason = today.getMonth() < 3;
+           
+           // Voorseizoen: alleen voorgang families
+           if (isPreseason && user.family !== priorityFamily) {
+             isDisabledBooking = true;
+             dayDiv.classList.add('disabled-booking');
+             dayDiv.style.position = 'relative';
+             
+             const overlay = document.createElement('div');
+             overlay.className = 'booking-overlay';
+             overlay.innerHTML = '<div class="overlay-text">Reserveren nog niet mogelijk</div>';
+             dayDiv.appendChild(overlay);
+           }
+         }
+       }
+       
+       // Alleen clickable als niet gereserveerd en niet disabled
+       if (!isReserved && isCurrentMonth && !isDisabledBooking) {
          dayDiv.classList.add('clickable');
          dayDiv.style.cursor = 'pointer';
          dayDiv.dataset.date = dateStr;

@@ -50,10 +50,26 @@
         <div id="pendingUsers" class="users-list"></div>
       </div>
 
-      <!-- Approved Users -->
+      <!-- Approved Users - Drag & Drop -->
       <div class="admin-section">
-        <h4>Goedgekeurde gebruikers</h4>
-        <div id="approvedUsers" class="users-list"></div>
+        <h4>Familie Organisatie</h4>
+        
+        <div class="families-container">
+          <div class="family-column" data-family="A" ondrop="dropUser(event)" ondragover="allowDrop(event)">
+            <h5>Familie A (Pieters-Louasson)</h5>
+            <div id="familyAUsers" class="family-users-list"></div>
+          </div>
+          
+          <div class="family-column" data-family="B" ondrop="dropUser(event)" ondragover="allowDrop(event)">
+            <h5>Familie B (Broeders)</h5>
+            <div id="familyBUsers" class="family-users-list"></div>
+          </div>
+          
+          <div class="family-column" data-family="" ondrop="dropUser(event)" ondragover="allowDrop(event)">
+            <h5>Geen Familie</h5>
+            <div id="noFamilyUsers" class="family-users-list"></div>
+          </div>
+        </div>
       </div>
     </div>
 
