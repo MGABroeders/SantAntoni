@@ -264,11 +264,14 @@ async function syncReservationsFromFirebase() {
   if (!isFirebaseReady()) return;
   
   try {
-    const snapshot = await firebaseDB.collection('reservations').orderBy('created', 'desc').get();
+    const snapshot = await firebaseDB.collection('reservations').get();
     const reservations = [];
     snapshot.forEach(doc => {
       reservations.push({ id: doc.id, ...doc.data() });
     });
+    
+    // Sorteer op created desc (client-side)
+    reservations.sort((a, b) => new Date(b.created) - new Date(a.created));
     
     localStorage.setItem('santantoni_reservations', JSON.stringify(reservations));
   } catch (error) {
@@ -321,12 +324,13 @@ function subscribeToReservations(callback) {
   }
   
   return firebaseDB.collection('reservations')
-    .orderBy('created', 'desc')
     .onSnapshot((snapshot) => {
       const reservations = [];
       snapshot.forEach(doc => {
         reservations.push({ id: doc.id, ...doc.data() });
       });
+      // Sorteer client-side
+      reservations.sort((a, b) => new Date(b.created) - new Date(a.created));
       callback(reservations);
     }, (error) => {
       console.error('Firebase snapshot fout:', error);
@@ -376,11 +380,14 @@ async function syncMessagesFromFirebase() {
   if (!isFirebaseReady()) return;
   
   try {
-    const snapshot = await firebaseDB.collection('messages').orderBy('date', 'desc').get();
+    const snapshot = await firebaseDB.collection('messages').get();
     const messages = [];
     snapshot.forEach(doc => {
       messages.push({ id: doc.id, ...doc.data() });
     });
+    
+    // Sorteer op date desc (client-side)
+    messages.sort((a, b) => new Date(b.date) - new Date(a.date));
     
     // Update localStorage
     localStorage.setItem('santantoni_messages', JSON.stringify(messages));
@@ -420,12 +427,13 @@ function subscribeToMessages(callback) {
   }
   
   return firebaseDB.collection('messages')
-    .orderBy('date', 'desc')
     .onSnapshot((snapshot) => {
       const messages = [];
       snapshot.forEach(doc => {
         messages.push({ id: doc.id, ...doc.data() });
       });
+      // Sorteer client-side
+      messages.sort((a, b) => new Date(b.date) - new Date(a.date));
       callback(messages);
     }, (error) => {
       console.error('Firebase snapshot fout:', error);
