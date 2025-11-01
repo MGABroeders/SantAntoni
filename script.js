@@ -89,27 +89,116 @@ function getSeizoenNaam(seizoen) {
   return namen[seizoen] || seizoen;
 }
 
-// Check seizoensregels (juli/aug alleen hele weken)
+// Check seizoensregels (zomermaanden alleen hele weken zaterdag-zaterdag)
 function checkSeizoenRules(aankomst, vertrek) {
   const start = new Date(aankomst);
   const end = new Date(vertrek);
   const maand = start.getMonth();
   
-  // Juli (6) of Augustus (7)
-  if (maand === 6 || maand === 7) {
+  // Juni, Juli, Augustus, September (5, 6, 7, 8)
+  if (maand >= 5 && maand <= 8) {
     const dayOfWeek = start.getDay(); // 0=zondag, 6=zaterdag
     const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
     
     // Moet zaterdag zijn (6) en minimaal 7 dagen
     if (dayOfWeek !== 6) {
-      return { valid: false, message: 'In juli en augustus mag je alleen vanaf zaterdag reserveren.' };
+      return { valid: false, message: 'In juni, juli, augustus en september mag je alleen vanaf zaterdag reserveren.' };
     }
     if (days < 7 || days % 7 !== 0) {
-      return { valid: false, message: 'In juli en augustus zijn alleen hele weken (zaterdag-zaterdag) mogelijk.' };
+      return { valid: false, message: 'In juni, juli, augustus en september zijn alleen hele weken (zaterdag-zaterdag) mogelijk.' };
     }
   }
   
   return { valid: true };
+}
+
+// Bepaal welke familie voorrang heeft in een zomermaand
+function getPriorityFamilyForMonth(maand, year, appartement) {
+  // Appartement 36: altijd familie A
+  if (appartement === '36' || appartement === 'B') {
+    return 'A';
+  }
+  
+  // Appartement 35: wisselend
+  // Juni (5) en Juli (6): even jaren → A, oneven jaren → B
+  // Augustus (7) en September (8): even jaren → B, oneven jaren → A
+  if (maand === 5 || maand === 6) {
+    return year % 2 === 0 ? 'A' : 'B';
+  }
+  if (maand === 7 || maand === 8) {
+    return year % 2 === 0 ? 'B' : 'A';
+  }
+  
+  return null; // Geen voorrang buiten zomermaanden
+}
+
+// Check voorseizoen constraint (1 jan - 31 mrt: alleen voorgang families)
+function checkPreseasonConstraint(aankomst, user, appartement) {
+  const today = new Date();
+  const reservationDate = new Date(aankomst);
+  const year = reservationDate.getFullYear();
+  
+  // Voorseizoen: 1 januari tot 31 maart
+  if (today.getMonth() < 3) { // Voor 1 april
+    // Check of dit een zomermaand is (juni t/m september = 5 t/m 8)
+    const reservationMonth = reservationDate.getMonth();
+    if (reservationMonth >= 5 && reservationMonth <= 8) {
+      const priorityFamily = getPriorityFamilyForMonth(reservationMonth, year, appartement);
+      if (priorityFamily && user.family !== priorityFamily) {
+        return { valid: false, message: `In het voorseizoen (januari-maart) mogen alleen leden van familie ${priorityFamily} de zomermaanden reserveren voor Appartement ${appartement === 'A' ? '35' : '36'}.` };
+      }
+    }
+  }
+  
+  return { valid: true };
+}
+
+// Bepaal totaalprijs met kortingen
+function calculatePriceWithDiscounts(apartement, aankomst, vertrek, user) {
+  const basePrice = calculatePrice(apartement, aankomst, vertrek);
+  let discounts = [];
+  let discountAmount = 0;
+  
+  // Beheerderskorting: admin krijgt 100% korting
+  if (user.role === 'admin') {
+    discountAmount = basePrice.total;
+    discounts.push({ type: 'beheerder', amount: discountAmount, percentage: 100 });
+    return { total: 0, discounts, breakdown: basePrice.breakdownItems };
+  }
+  
+  // Langverblijfkorting: 5% bij 3+ weken buiten zomer
+  const nights = basePrice.nights;
+  const startDate = new Date(aankomst);
+  const maand = startDate.getMonth();
+  
+  if (nights >= 21 && (maand < 5 || maand > 8)) {
+    const discount = basePrice.total * 0.05;
+    discountAmount += discount;
+    discounts.push({ type: 'langverblijf', amount: discount, percentage: 5, nights });
+  }
+  
+  // Familiekorting: 10% korting voor niet-voorgang families die binnen 2 weken boeken
+  const today = new Date();
+  const daysUntilArrival = Math.ceil((startDate - today) / (1000 * 60 * 60 * 24));
+  
+  if (maand >= 5 && maand <= 8 && daysUntilArrival <= 14 && daysUntilArrival >= 0) {
+    const year = startDate.getFullYear();
+    const priorityFamily = getPriorityFamilyForMonth(maand, year, appartement);
+    
+    if (user.family && user.family !== priorityFamily) {
+      const remainingAmount = basePrice.total - discountAmount;
+      const discount = remainingAmount * 0.10;
+      discountAmount += discount;
+      discounts.push({ type: 'familiekorting', amount: discount, percentage: 10, reason: 'last-minute boeking' });
+    }
+  }
+  
+  return {
+    total: Math.max(0, basePrice.total - discountAmount),
+    discounts,
+    breakdown: basePrice.breakdownItems,
+    baseTotal: basePrice.total
+  };
 }
 
 // Check of een datum bezet is
@@ -639,20 +728,37 @@ document.addEventListener('DOMContentLoaded', () => {
   const reservationForm = document.getElementById('reservationForm');
   if (reservationForm) {
     function updatePrice() {
+      const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
       const appartement = document.getElementById('appartement').value;
       const aankomst = document.getElementById('aankomst').value;
       const vertrek = document.getElementById('vertrek').value;
       const priceDisplay = document.getElementById('priceDisplay');
       
       if (appartement && aankomst && vertrek && new Date(aankomst) < new Date(vertrek)) {
-        const priceInfo = calculatePrice(appartement, aankomst, vertrek);
+        const priceInfo = user ? calculatePriceWithDiscounts(appartement, aankomst, vertrek, user) : calculatePrice(appartement, aankomst, vertrek);
         
         // Build detailed breakdown list
         const breakdownContainer = document.getElementById('priceBreakdown');
         if (breakdownContainer && priceInfo.breakdownItems) {
-          breakdownContainer.innerHTML = priceInfo.breakdownItems.map(item => 
+          let html = priceInfo.breakdownItems.map(item => 
             `<div>${item.count}x ${item.naam} = €${(item.count * item.prijs).toFixed(2)}</div>`
-          ).join('') + `<div><strong>Totaal = €${priceInfo.total.toFixed(2)}</strong></div>`;
+          ).join('');
+          
+          // Add discounts if any
+          if (priceInfo.discounts && priceInfo.discounts.length > 0) {
+            html += '<div style="margin-top: 0.5em; color: #4CAF50;"><strong>Kortingen:</strong></div>';
+            priceInfo.discounts.forEach(disc => {
+              html += `<div style="color: #4CAF50;">-${disc.percentage}% ${disc.type} = -€${disc.amount.toFixed(2)}</div>`;
+            });
+          }
+          
+          // Add totals
+          if (priceInfo.baseTotal !== undefined) {
+            html += `<div><strong>Subtotaal: €${priceInfo.baseTotal.toFixed(2)}</strong></div>`;
+          }
+          html += `<div><strong>Totaal = €${priceInfo.total.toFixed(2)}</strong></div>`;
+          
+          breakdownContainer.innerHTML = html;
         }
         
         priceDisplay.style.display = 'block';
@@ -766,14 +872,23 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
+    // Check voorseizoen constraint
+    if (user) {
+      const preseasonCheck = checkPreseasonConstraint(aankomst, user, appartement);
+      if (!preseasonCheck.valid) {
+        alert(preseasonCheck.message);
+        return;
+      }
+    }
+    
     // Check overlap
     if (hasOverlap(appartement, aankomst, vertrek)) {
       alert(`Appartement ${appartement} is al gereserveerd in deze periode!`);
       return;
     }
     
-    // Bereken prijs
-    const priceInfo = calculatePrice(appartement, aankomst, vertrek);
+    // Bereken prijs met kortingen
+    const priceInfo = user ? calculatePriceWithDiscounts(appartement, aankomst, vertrek, user) : calculatePrice(appartement, aankomst, vertrek);
     
     // Reservering toevoegen
     const reservation = {

@@ -57,6 +57,8 @@ function loadUsers() {
             <strong>${user.name} ${user.role === 'admin' ? '(Admin)' : ''}</strong>
             <div>${user.email}</div>
             <div style="font-size: 0.9em; color: #666;">
+              Familie: ${user.family || 'Geen'} | 
+              Rang: ${user.rank || 'Geen'} | 
               Boekingsrechten: ${user.settings?.canBook ? '✅ Ja' : '❌ Nee'} | 
               Max/jaar: ${user.settings?.maxReservationsPerYear || 5} | 
               Prioriteit: ${user.settings?.priority || 'normal'}
@@ -99,6 +101,8 @@ function editUserSettings(userId) {
   
   document.getElementById('settingsUserId').value = user.id;
   document.getElementById('settingsUserName').textContent = user.name;
+  document.getElementById('settingsFamily').value = user.family || '';
+  document.getElementById('settingsRank').value = user.rank || '';
   document.getElementById('settingsCanBook').checked = user.settings?.canBook || false;
   document.getElementById('settingsMaxReservations').value = user.settings?.maxReservationsPerYear || 5;
   document.getElementById('settingsPriority').value = user.settings?.priority || 'normal';
@@ -115,17 +119,33 @@ function closeUserSettingsModal() {
 function saveUserSettings() {
   if (!checkAdminAccess()) return;
   const userId = document.getElementById('settingsUserId').value;
+  const users = getUsers();
+  const user = users.find(u => u.id === userId);
+  if (!user) return;
+  
+  // Update family and rank directly on user
+  user.family = document.getElementById('settingsFamily').value || null;
+  user.rank = document.getElementById('settingsRank').value || null;
+  
   const settings = {
     canBook: document.getElementById('settingsCanBook').checked,
     maxReservationsPerYear: parseInt(document.getElementById('settingsMaxReservations').value),
     priority: document.getElementById('settingsPriority').value
   };
   
-  if (updateUserSettings(userId, settings)) {
-    loadUsers();
-    closeUserSettingsModal();
-    alert('Instellingen opgeslagen');
+  // Also update settings via updateUserSettings
+  user.settings = { ...user.settings, ...settings };
+  saveUsers(users);
+  
+  // Update current user if it's the same user
+  const currentUser = getCurrentUser();
+  if (currentUser && currentUser.id === userId) {
+    setCurrentUser(user);
   }
+  
+  loadUsers();
+  closeUserSettingsModal();
+  alert('Instellingen opgeslagen');
 }
 
 // Load transactions

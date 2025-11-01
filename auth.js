@@ -112,6 +112,8 @@ function register(name, email, password) {
     password, // In productie: hash dit!
     role: 'user',
     approved: false, // Moet goedgekeurd worden door admin
+    family: null, // 'A' of 'B' - wordt ingesteld door admin
+    rank: null, // 'ouder' of 'kind' - wordt ingesteld door admin
     settings: {
       canBook: false, // Standaard geen boekingsrechten tot goedgekeurd
       maxReservationsPerYear: 5,
