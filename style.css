@@ -1,0 +1,36 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background-color: #f7f8fa;
+    color: #333;
+  }
+  
+  header {
+    background-color: #0066cc;
+    color: white;
+    padding: 1em;
+    text-align: center;
+  }
+  
+  nav a {
+    color: white;
+    margin: 0 10px;
+    text-decoration: none;
+    font-weight: bold;
+  }
+  
+  section {
+    padding: 2em;
+  }
+  
+  .card {
+    background: white;
+    padding: 1em;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    display: inline-block;
+    margin: 1em;
+    width: 250px;
+    vertical-align: top;
+  }
+  
