@@ -18,7 +18,8 @@ function getReservations() {
   const data = localStorage.getItem('santantoni_reservations');
   const reservations = data ? JSON.parse(data) : [];
   
-  return reservations;
+  // Filter test reserveringen eruit
+  return reservations.filter(res => !isProefReservation(res));
 }
 
 // Async versie voor directe Firebase gebruik
@@ -42,180 +43,36 @@ async function getReservationsAsync() {
   }
 }
 
-// Initialiseer proef reserveringen (sync versie)
-function initProefReserveringenSync() {
-  const today = new Date();
-  const reservations = [];
+// Helper functie om alle test/proef reserveringen te verwijderen uit Firebase
+async function removeProefReservations() {
+  if (!isFirebaseReady()) return;
   
-  // Proef reservering 1: Appartement A - volgende maand, 5 dagen
-  const res1Start = new Date(today.getFullYear(), today.getMonth() + 1, 10);
-  const res1End = new Date(res1Start);
-  res1End.setDate(res1End.getDate() + 5);
-  
-  reservations.push({
-    id: 'proef1',
-    appartement: 'A',
-    naam: 'Jan de Vries',
-    email: 'jan@example.com',
-    aankomst: res1Start.toISOString().split('T')[0],
-    vertrek: res1End.toISOString().split('T')[0],
-    personen: 4,
-    opmerking: 'Familie vakantie',
-    prijs: 400,
-    status: 'goedgekeurd',
-    created: new Date().toISOString()
-  });
-  
-  // Proef reservering 2: Appartement B - over 2 maanden, 7 dagen
-  const res2Start = new Date(today.getFullYear(), today.getMonth() + 2, 5);
-  const res2End = new Date(res2Start);
-  res2End.setDate(res2End.getDate() + 7);
-  
-  reservations.push({
-    id: 'proef2',
-    appartement: 'B',
-    naam: 'Maria Jansen',
-    email: 'maria@example.com',
-    aankomst: res2Start.toISOString().split('T')[0],
-    vertrek: res2End.toISOString().split('T')[0],
-    personen: 2,
-    opmerking: 'Romantisch weekend',
-    prijs: 595,
-    status: 'betaald',
-    created: new Date().toISOString()
-  });
-  
-  // Proef reservering 3: Appartement A - volgende week, 3 dagen
-  const res3Start = new Date(today);
-  res3Start.setDate(res3Start.getDate() + 7);
-  const res3End = new Date(res3Start);
-  res3End.setDate(res3End.getDate() + 3);
-  
-  reservations.push({
-    id: 'proef3',
-    appartement: 'A',
-    naam: 'Piet Bakker',
-    email: 'piet@example.com',
-    aankomst: res3Start.toISOString().split('T')[0],
-    vertrek: res3End.toISOString().split('T')[0],
-    personen: 3,
-    opmerking: '',
-    prijs: 240,
-    status: 'in_afwachting',
-    created: new Date().toISOString()
-  });
-  
-  // Proef reservering 4: Appartement B - deze maand, laatste week
-  const res4Start = new Date(today.getFullYear(), today.getMonth(), 20);
-  if (res4Start < today) {
-    res4Start.setMonth(res4Start.getMonth() + 1);
+  try {
+    const snapshot = await firebaseDB.collection('reservations').get();
+    const batch = firebaseDB.batch();
+    let removed = 0;
+    
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      // Verwijder reserveringen met proef IDs of test emails
+      if (doc.id.startsWith('proef') || 
+          data.email && data.email.includes('example.com') ||
+          (data.naam && (data.naam.includes('Jan de Vries') || 
+                         data.naam.includes('Maria Jansen') || 
+                         data.naam.includes('Piet Bakker') || 
+                         data.naam.includes('Lisa Smit')))) {
+        batch.delete(doc.ref);
+        removed++;
+      }
+    });
+    
+    if (removed > 0) {
+      await batch.commit();
+      console.log(`${removed} test reserveringen verwijderd uit Firebase`);
+    }
+  } catch (error) {
+    console.error('Fout bij verwijderen test reserveringen:', error);
   }
-  const res4End = new Date(res4Start);
-  res4End.setDate(res4End.getDate() + 4);
-  
-  reservations.push({
-    id: 'proef4',
-    appartement: 'B',
-    naam: 'Lisa Smit',
-    email: 'lisa@example.com',
-    aankomst: res4Start.toISOString().split('T')[0],
-    vertrek: res4End.toISOString().split('T')[0],
-    personen: 2,
-    opmerking: 'Verjaardagsweekend',
-    prijs: 340,
-    status: 'goedgekeurd',
-    created: new Date().toISOString()
-  });
-  
-  localStorage.setItem('santantoni_reservations', JSON.stringify(reservations));
-}
-
-// Initialiseer proef reserveringen (async versie)
-async function initProefReserveringen() {
-  const today = new Date();
-  const reservations = [];
-  
-  // Proef reservering 1: Appartement A - volgende maand, 5 dagen
-  const res1Start = new Date(today.getFullYear(), today.getMonth() + 1, 10);
-  const res1End = new Date(res1Start);
-  res1End.setDate(res1End.getDate() + 5);
-  
-  reservations.push({
-    id: 'proef1',
-    appartement: 'A',
-    naam: 'Jan de Vries',
-    email: 'jan@example.com',
-    aankomst: res1Start.toISOString().split('T')[0],
-    vertrek: res1End.toISOString().split('T')[0],
-    personen: 4,
-    opmerking: 'Familie vakantie',
-    prijs: 400,
-    status: 'goedgekeurd',
-    created: new Date().toISOString()
-  });
-  
-  // Proef reservering 2: Appartement B - over 2 maanden, 7 dagen
-  const res2Start = new Date(today.getFullYear(), today.getMonth() + 2, 5);
-  const res2End = new Date(res2Start);
-  res2End.setDate(res2End.getDate() + 7);
-  
-  reservations.push({
-    id: 'proef2',
-    appartement: 'B',
-    naam: 'Maria Jansen',
-    email: 'maria@example.com',
-    aankomst: res2Start.toISOString().split('T')[0],
-    vertrek: res2End.toISOString().split('T')[0],
-    personen: 2,
-    opmerking: 'Romantisch weekend',
-    prijs: 595,
-    status: 'betaald',
-    created: new Date().toISOString()
-  });
-  
-  // Proef reservering 3: Appartement A - volgende week, 3 dagen
-  const res3Start = new Date(today);
-  res3Start.setDate(res3Start.getDate() + 7);
-  const res3End = new Date(res3Start);
-  res3End.setDate(res3End.getDate() + 3);
-  
-  reservations.push({
-    id: 'proef3',
-    appartement: 'A',
-    naam: 'Piet Bakker',
-    email: 'piet@example.com',
-    aankomst: res3Start.toISOString().split('T')[0],
-    vertrek: res3End.toISOString().split('T')[0],
-    personen: 3,
-    opmerking: '',
-    prijs: 240,
-    status: 'in_afwachting',
-    created: new Date().toISOString()
-  });
-  
-  // Proef reservering 4: Appartement B - deze maand, laatste week
-  const res4Start = new Date(today.getFullYear(), today.getMonth(), 20);
-  if (res4Start < today) {
-    res4Start.setMonth(res4Start.getMonth() + 1);
-  }
-  const res4End = new Date(res4Start);
-  res4End.setDate(res4End.getDate() + 4);
-  
-  reservations.push({
-    id: 'proef4',
-    appartement: 'B',
-    naam: 'Lisa Smit',
-    email: 'lisa@example.com',
-    aankomst: res4Start.toISOString().split('T')[0],
-    vertrek: res4End.toISOString().split('T')[0],
-    personen: 2,
-    opmerking: 'Verjaardagsweekend',
-    prijs: 340,
-    status: 'goedgekeurd',
-    created: new Date().toISOString()
-  });
-  
-  await saveReservationsAsync(reservations);
 }
 
 // Sla reserveringen op (sync versie)
@@ -228,14 +85,44 @@ function saveReservations(reservations) {
   }
 }
 
+// Helper om te checken of een reservering een test/proef reservering is
+function isProefReservation(reservation) {
+  if (!reservation) return false;
+  
+  // Check ID
+  if (reservation.id && reservation.id.toString().startsWith('proef')) {
+    return true;
+  }
+  
+  // Check email
+  if (reservation.email && reservation.email.includes('example.com')) {
+    return true;
+  }
+  
+  // Check naam
+  if (reservation.naam && (
+      reservation.naam.includes('Jan de Vries') ||
+      reservation.naam.includes('Maria Jansen') ||
+      reservation.naam.includes('Piet Bakker') ||
+      reservation.naam.includes('Lisa Smit')
+  )) {
+    return true;
+  }
+  
+  return false;
+}
+
 // Sync reserveringen naar Firebase
 async function syncReservationsToFirebase(reservations) {
   try {
+    // Filter test reserveringen eruit
+    const realReservations = reservations.filter(res => !isProefReservation(res));
+    
     const batch = firebaseDB.batch();
     const snapshot = await firebaseDB.collection('reservations').get();
     snapshot.forEach(doc => batch.delete(doc.ref));
     
-    reservations.forEach(res => {
+    realReservations.forEach(res => {
       const docRef = firebaseDB.collection('reservations').doc(res.id || Date.now().toString());
       const { id, ...data } = res;
       batch.set(docRef, data);
@@ -255,7 +142,11 @@ async function syncReservationsFromFirebase() {
     const snapshot = await firebaseDB.collection('reservations').get();
     const reservations = [];
     snapshot.forEach(doc => {
-      reservations.push({ id: doc.id, ...doc.data() });
+      const reservation = { id: doc.id, ...doc.data() };
+      // Filter test reserveringen eruit
+      if (!isProefReservation(reservation)) {
+        reservations.push(reservation);
+      }
     });
     
     // Sorteer op created desc (client-side)
@@ -315,11 +206,18 @@ function subscribeToReservations(callback) {
     .onSnapshot((snapshot) => {
       const reservations = [];
       snapshot.forEach(doc => {
-        reservations.push({ id: doc.id, ...doc.data() });
+        const reservation = { id: doc.id, ...doc.data() };
+        // Filter test reserveringen eruit
+        if (!isProefReservation(reservation)) {
+          reservations.push(reservation);
+        }
       });
       // Sorteer client-side
       reservations.sort((a, b) => new Date(b.created) - new Date(a.created));
       callback(reservations);
+      
+      // Automatisch test reserveringen verwijderen uit Firebase (achtergrond)
+      removeProefReservations().catch(err => console.error('Fout bij verwijderen test reserveringen:', err));
     }, (error) => {
       console.error('Firebase snapshot fout:', error);
     });
