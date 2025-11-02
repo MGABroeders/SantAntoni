@@ -75,13 +75,23 @@ async function removeProefReservations() {
   }
 }
 
+// Flag om te voorkomen dat syncReservationsToFirebase wordt aangeroepen na directe updates
+let firebaseDirectUpdateInProgress = false;
+let lastDirectUpdateTime = 0;
+
 // Sla reserveringen op (sync versie)
-function saveReservations(reservations) {
+function saveReservations(reservations, skipFirebaseSync = false) {
   localStorage.setItem('santantoni_reservations', JSON.stringify(reservations));
   
-  // Sync naar Firebase als beschikbaar
-  if (isFirebaseReady()) {
+  // Sync naar Firebase als beschikbaar (skip als skipFirebaseSync = true)
+  // WARNING: syncReservationsToFirebase verwijdert ALLES en maakt opnieuw aan, wat directe updates kan overschrijven!
+  // Gebruik skipFirebaseSync=true als je directe Firestore updates gebruikt
+  // Of als er recent een directe update is gedaan (binnen 5 seconden)
+  const timeSinceLastDirectUpdate = Date.now() - lastDirectUpdateTime;
+  if (!skipFirebaseSync && !firebaseDirectUpdateInProgress && timeSinceLastDirectUpdate > 5000 && isFirebaseReady()) {
     syncReservationsToFirebase(reservations).catch(err => console.error('Firebase sync fout:', err));
+  } else if (skipFirebaseSync || firebaseDirectUpdateInProgress || timeSinceLastDirectUpdate <= 5000) {
+    console.log('Skipping syncReservationsToFirebase - direct update in progress or recent');
   }
 }
 
@@ -168,7 +178,7 @@ async function saveReservationsAsync(reservations) {
 }
 
 // Voeg reservering toe (sync versie)
-function addReservation(reservation) {
+async function addReservation(reservation) {
   if (!reservation.id) {
     reservation.id = Date.now().toString();
   }
@@ -176,17 +186,51 @@ function addReservation(reservation) {
     reservation.created = new Date().toISOString();
   }
   
+  // Add directly to Firebase first (source of truth)
+  if (isFirebaseReady() && firebaseDB) {
+    try {
+      const { id, ...data } = reservation;
+      await firebaseDB.collection('reservations').doc(id).set(data);
+      console.log('Reservering toegevoegd aan Firebase:', id);
+    } catch (error) {
+      console.error('Fout bij toevoegen reservering aan Firebase:', error);
+      // Fallback to old method if Firebase fails
+      const reservations = getReservations();
+      reservations.push(reservation);
+      saveReservations(reservations);
+      return reservation;
+    }
+  }
+  
+  // Update localStorage after successful Firebase add
   const reservations = getReservations();
   reservations.push(reservation);
-  saveReservations(reservations);
+  localStorage.setItem('santantoni_reservations', JSON.stringify(reservations));
+  
   return reservation;
 }
 
 // Verwijder reservering (sync versie)
-function deleteReservation(id) {
+async function deleteReservation(id) {
+  // Delete from Firebase first (source of truth)
+  if (isFirebaseReady() && firebaseDB) {
+    try {
+      await firebaseDB.collection('reservations').doc(id).delete();
+      console.log('Reservering verwijderd uit Firebase:', id);
+    } catch (error) {
+      console.error('Fout bij verwijderen reservering uit Firebase:', error);
+      // Fallback to old method if Firebase fails
+      const reservations = getReservations();
+      const filtered = reservations.filter(r => r.id !== id);
+      saveReservations(filtered);
+      return;
+    }
+  }
+  
+  // Update localStorage after successful Firebase delete
   const reservations = getReservations();
   const filtered = reservations.filter(r => r.id !== id);
-  saveReservations(filtered);
+  localStorage.setItem('santantoni_reservations', JSON.stringify(filtered));
 }
 
 // Real-time listener voor reserveringen

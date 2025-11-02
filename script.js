@@ -840,9 +840,9 @@ function displayReservations(containerId = 'reservationsList') {
 }
 
 // Reservering verwijderen
-function handleDeleteReservation(id) {
+async function handleDeleteReservation(id) {
   if (confirm('Weet je zeker dat je deze reservering wilt verwijderen?')) {
-    deleteReservation(id);
+    await deleteReservation(id);
     displayReservations();
     generateCalendar();
   }
@@ -1241,7 +1241,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Formulier submit - alleen op kalender pagina
   if (reservationForm) {
-    reservationForm.addEventListener('submit', (e) => {
+    reservationForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
     // Check authentication
@@ -1312,7 +1312,8 @@ document.addEventListener('DOMContentLoaded', () => {
       createdBy: user ? user.name : naam
     };
     
-    const newReservation = addReservation(reservation);
+    // Wait for async addReservation to complete
+    const newReservation = await addReservation(reservation);
     
     // Maak transactie aan
     if (typeof addTransaction === 'function') {
