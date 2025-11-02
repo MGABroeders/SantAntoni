@@ -1223,6 +1223,24 @@ body {
       overflow-x: auto;
     }
     
+    /* Kleinere knoppen voor mobiel */
+    .reservation-controls {
+      gap: 4px;
+      margin-top: 0.8em;
+    }
+    
+    .date-input {
+      padding: 0.4em 0.5em;
+      font-size: 0.8em;
+      border-width: 1px;
+    }
+    
+    .btn-reserve {
+      padding: 0.5em 1em;
+      font-size: 0.85em;
+      margin-top: 0;
+    }
+    
     .reservation-item {
       flex-direction: column;
       align-items: flex-start;
