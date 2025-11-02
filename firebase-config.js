@@ -25,7 +25,15 @@ function initFirebase() {
   firebaseApp = firebase.initializeApp(firebaseConfig);
   firebaseDB = firebase.firestore();
   firebaseAuth = firebase.auth();
-  firebaseStorage = firebase.storage();
+  
+  // Firebase Storage is optional - only initialize if available
+  if (firebase.storage) {
+    firebaseStorage = firebase.storage();
+    console.log('Firebase Storage succesvol geïnitialiseerd');
+  } else {
+    console.warn('Firebase Storage SDK niet geladen - foto uploads werken niet');
+  }
+  
   console.log('Firebase succesvol geïnitialiseerd');
   return true;
 }

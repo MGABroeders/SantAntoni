@@ -52,6 +52,22 @@ const selectionState = {
 function calculatePrice(apartement, aankomst, vertrek, user = null) {
   if (!aankomst || !vertrek) return { total: 0, breakdown: '', breakdownItems: [] };
   
+  // Ensure appartement is a string (not an HTML element)
+  if (appartement && typeof appartement !== 'string') {
+    // If it's an HTML element, try to get .value
+    if (appartement.value !== undefined) {
+      appartement = appartement.value;
+    } else {
+      console.error('calculatePrice: appartement is not a string:', appartement);
+      return { total: 0, breakdown: '', breakdownItems: [] };
+    }
+  }
+  
+  if (!appartement || appartement === '') {
+    console.error('calculatePrice: appartement is empty or null');
+    return { total: 0, breakdown: '', breakdownItems: [] };
+  }
+  
   const start = new Date(aankomst);
   const end = new Date(vertrek);
   const nights = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
@@ -64,7 +80,9 @@ function calculatePrice(apartement, aankomst, vertrek, user = null) {
   
   // Check of appartementnummer correct is
   if (!PRIJZEN[appartementId] || !PRIJZEN[appartementId][family]) {
-    console.error(`Geen prijs configuratie voor App ${appartementId}, Familie ${family}`);
+    console.error(`Geen prijs configuratie voor App ${appartementId} (van '${appartement}'), Familie ${family}`);
+    console.error('Available appartements:', Object.keys(PRIJZEN));
+    console.error('Available families for App', appartementId, ':', PRIJZEN[appartementId] ? Object.keys(PRIJZEN[appartementId]) : 'none');
     return { total: 0, breakdown: '', breakdownItems: [] };
   }
   
@@ -982,14 +1000,22 @@ document.addEventListener('DOMContentLoaded', () => {
   // Update prijs bij wijziging datums of appartement - alleen op kalender pagina
   const reservationForm = document.getElementById('reservationForm');
   if (reservationForm) {
-    function updatePrice() {
+      function updatePrice() {
       const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
-      const appartement = document.getElementById('appartement').value;
-      const aankomst = document.getElementById('aankomst').value;
-      const vertrek = document.getElementById('vertrek').value;
+      const appartementElement = document.getElementById('appartement');
+      const appartement = appartementElement ? appartementElement.value : null;
+      const aankomst = document.getElementById('aankomst')?.value;
+      const vertrek = document.getElementById('vertrek')?.value;
       const priceDisplay = document.getElementById('priceDisplay');
       
       console.log('updatePrice called:', { user, appartement, aankomst, vertrek });
+      
+      // Ensure appartement is a string value, not an element
+      if (!appartement || typeof appartement !== 'string') {
+        console.warn('Appartement is not a valid string:', appartement);
+        if (priceDisplay) priceDisplay.style.display = 'none';
+        return;
+      }
       
       if (appartement && aankomst && vertrek && new Date(aankomst) < new Date(vertrek)) {
         const priceInfo = user ? calculatePriceWithDiscounts(appartement, aankomst, vertrek, user) : calculatePrice(appartement, aankomst, vertrek, null);
