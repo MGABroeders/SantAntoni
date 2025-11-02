@@ -514,10 +514,40 @@ body {
      border-color: #999;
    }
    
-   /* Combinaties met today */
-   .calendar-day.today.reserved,
-   .calendar-day.today.reserved-A,
-   .calendar-day.today.reserved-B {
+   /* Combinaties met today - pending */
+   .calendar-day.today.reserved-pending,
+   .calendar-day.today.reserved-A.reserved-pending,
+   .calendar-day.today.reserved-B.reserved-pending,
+   .calendar-day.today.reserved.reserved-pending {
+     background: repeating-linear-gradient(
+       45deg,
+       #f5f5f5,
+       #f5f5f5 5px,
+       #d3d3d3 5px,
+       #d3d3d3 10px
+     ) !important;
+     font-weight: bold;
+   }
+   
+   /* Combinaties met today - approved */
+   .calendar-day.today.reserved-approved,
+   .calendar-day.today.reserved-A.reserved-approved,
+   .calendar-day.today.reserved-B.reserved-approved,
+   .calendar-day.today.reserved.reserved-approved {
+     background: repeating-linear-gradient(
+       45deg,
+       #d3d3d3,
+       #d3d3d3 5px,
+       #a0a0a0 5px,
+       #a0a0a0 10px
+     ) !important;
+     font-weight: bold;
+   }
+   
+   /* Fallback voor today zonder status */
+   .calendar-day.today.reserved:not(.reserved-approved):not(.reserved-pending),
+   .calendar-day.today.reserved-A:not(.reserved-approved):not(.reserved-pending),
+   .calendar-day.today.reserved-B:not(.reserved-approved):not(.reserved-pending) {
      background: repeating-linear-gradient(
        45deg,
        #f5f5f5,
