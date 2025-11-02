@@ -52,19 +52,19 @@ const selectionState = {
 function calculatePrice(apartement, aankomst, vertrek, user = null) {
   if (!aankomst || !vertrek) return { total: 0, breakdown: '', breakdownItems: [] };
   
-  // Ensure appartement is a string (not an HTML element)
-  if (appartement && typeof appartement !== 'string') {
+  // Ensure apartement is a string (not an HTML element)
+  if (apartement && typeof apartement !== 'string') {
     // If it's an HTML element, try to get .value
-    if (appartement.value !== undefined) {
-      appartement = appartement.value;
+    if (apartement.value !== undefined) {
+      apartement = apartement.value;
     } else {
-      console.error('calculatePrice: appartement is not a string:', appartement);
+      console.error('calculatePrice: apartement is not a string:', apartement);
       return { total: 0, breakdown: '', breakdownItems: [] };
     }
   }
   
-  if (!appartement || appartement === '') {
-    console.error('calculatePrice: appartement is empty or null');
+  if (!apartement || apartement === '') {
+    console.error('calculatePrice: apartement is empty or null');
     return { total: 0, breakdown: '', breakdownItems: [] };
   }
   
@@ -76,11 +76,11 @@ function calculatePrice(apartement, aankomst, vertrek, user = null) {
   const family = user && user.family ? user.family : 'C';
   
   // Converteer A->35, B->36 voor oude code compatibiliteit
-  const appartementId = appartement === 'A' ? '35' : (appartement === 'B' ? '36' : appartement);
+  const appartementId = apartement === 'A' ? '35' : (apartement === 'B' ? '36' : apartement);
   
   // Check of appartementnummer correct is
   if (!PRIJZEN[appartementId] || !PRIJZEN[appartementId][family]) {
-    console.error(`Geen prijs configuratie voor App ${appartementId} (van '${appartement}'), Familie ${family}`);
+    console.error(`Geen prijs configuratie voor App ${appartementId} (van '${apartement}'), Familie ${family}`);
     console.error('Available appartements:', Object.keys(PRIJZEN));
     console.error('Available families for App', appartementId, ':', PRIJZEN[appartementId] ? Object.keys(PRIJZEN[appartementId]) : 'none');
     return { total: 0, breakdown: '', breakdownItems: [] };
@@ -89,7 +89,7 @@ function calculatePrice(apartement, aankomst, vertrek, user = null) {
   const appPricing = PRIJZEN[appartementId][family];
   
   console.log('Price calculation:', {
-    appartement,
+    apartement,
     appartementId,
     family,
     appPricing,

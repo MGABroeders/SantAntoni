@@ -287,13 +287,13 @@ function renderReservations(reservations, container) {
     if (!price || price === 0) {
       // Calculate price based on user family and dates
       const family = user ? (user.family || 'C') : 'C';
-      const appartement = res.appartement === '35' || res.appartement === 'A' ? 'A' : (res.appartement === '36' || res.appartement === 'B' ? 'B' : res.appartement);
+      const apartement = res.appartement === '35' || res.appartement === 'A' ? 'A' : (res.appartement === '36' || res.appartement === 'B' ? 'B' : res.appartement);
       
       if (typeof calculatePriceWithDiscounts === 'function' && user) {
-        const priceInfo = calculatePriceWithDiscounts(appartement, res.aankomst, res.vertrek, user);
+        const priceInfo = calculatePriceWithDiscounts(apartement, res.aankomst, res.vertrek, user);
         price = priceInfo.total;
       } else if (typeof calculatePrice === 'function') {
-        const priceInfo = calculatePrice(appartement, res.aankomst, res.vertrek, user || null);
+        const priceInfo = calculatePrice(apartement, res.aankomst, res.vertrek, user || null);
         price = priceInfo.total;
       }
     }
