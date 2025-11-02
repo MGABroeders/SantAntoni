@@ -409,6 +409,61 @@ async function markReservationAsPaid(reservationId) {
   alert('Reservering gemarkeerd als betaald');
 }
 
+// Delete reservation (admin only, with Firebase sync)
+async function handleDeleteReservation(reservationId) {
+  if (!checkAdminAccess()) return;
+  
+  if (!confirm('Weet je zeker dat je deze reservering wilt verwijderen? Dit kan niet ongedaan worden gemaakt.')) {
+    return;
+  }
+  
+  const reservations = typeof getReservations === 'function' ? getReservations() : [];
+  const reservation = reservations.find(r => r.id === reservationId);
+  
+  if (!reservation) {
+    alert('Reservering niet gevonden');
+    return;
+  }
+  
+  // Remove from local array
+  const filtered = reservations.filter(r => r.id !== reservationId);
+  
+  // Save locally first
+  if (typeof saveReservations === 'function') {
+    saveReservations(filtered);
+  }
+  
+  // Delete from Firebase directly
+  if (typeof firebaseDB !== 'undefined' && firebaseDB && reservation.id) {
+    try {
+      await firebaseDB.collection('reservations').doc(reservation.id).delete();
+      console.log('Reservering verwijderd uit Firebase:', reservation.id);
+    } catch (error) {
+      console.error('Fout bij verwijderen reservering uit Firebase:', error);
+      alert('Fout bij verwijderen reservering uit Firebase. Check console voor details.');
+      return;
+    }
+  }
+  
+  // Wait a bit for Firebase to sync, then reload
+  setTimeout(() => {
+    // Reload transactions/reservations list
+    loadTransactions();
+    
+    // Also update on kalender.html if it exists
+    if (typeof displayReservations === 'function') {
+      displayReservations();
+    }
+    
+    // Also update calendar if it exists
+    if (typeof generateCalendar === 'function') {
+      generateCalendar();
+    }
+  }, 500);
+  
+  alert('Reservering verwijderd');
+}
+
 // Tab switching
 function initAdminTabs() {
   const tabs = document.querySelectorAll('.admin-tab');
