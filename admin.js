@@ -492,6 +492,13 @@ async function handleDeleteReservation(reservationId) {
   alert('Reservering verwijderd');
 }
 
+// Load priority bypass status on page load
+function initPriorityBypass() {
+  if (document.getElementById('priorityBypassBtn')) {
+    updatePriorityBypassUI();
+  }
+}
+
 // Tab switching
 function initAdminTabs() {
   const tabs = document.querySelectorAll('.admin-tab');
@@ -507,6 +514,9 @@ function initAdminTabs() {
       loadTransactions();
     }
   }
+  
+  // Load priority bypass status
+  initPriorityBypass();
   
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
@@ -618,6 +628,47 @@ function savePriorityPeriod() {
   
   // TODO: Save to localStorage/config
   alert(`Prioriteitsperiode opgeslagen: Maanden ${startMonth} t/m ${endMonth}`);
+}
+
+// Toggle priority period bypass (test modus)
+function togglePriorityPeriodBypass() {
+  const currentStatus = localStorage.getItem('priorityPeriodBypass') === 'true';
+  const newStatus = !currentStatus;
+  
+  localStorage.setItem('priorityPeriodBypass', newStatus.toString());
+  
+  updatePriorityBypassUI();
+  
+  alert(newStatus ? 
+    '✅ Prioriteitsperiode is UITGESCHAKELD.\n\nIedereen kan nu reserveren ongeacht de periode.' :
+    '✅ Prioriteitsperiode is INGESCHAKELD.\n\nDe normale prioriteitsregels gelden weer.');
+}
+
+// Update UI voor priority bypass status
+function updatePriorityBypassUI() {
+  const isBypassed = localStorage.getItem('priorityPeriodBypass') === 'true';
+  const btn = document.getElementById('priorityBypassBtn');
+  const status = document.getElementById('priorityBypassStatus');
+  
+  if (btn) {
+    btn.textContent = isBypassed ? 'Prioriteitsperiode Inschakelen' : 'Prioriteitsperiode Uitschakelen';
+    btn.style.background = isBypassed ? '#28a745' : '#6c757d';
+  }
+  
+  if (status) {
+    if (isBypassed) {
+      status.textContent = '❌ UITGESCHAKELD - Prioriteitsregels zijn niet actief';
+      status.style.color = '#dc3545';
+    } else {
+      status.textContent = '✅ INGESCHAKELD - Prioriteitsregels zijn actief';
+      status.style.color = '#28a745';
+    }
+  }
+}
+
+// Check of priority period bypass actief is
+function isPriorityPeriodBypassed() {
+  return localStorage.getItem('priorityPeriodBypass') === 'true';
 }
 
 // Save pricing configuration

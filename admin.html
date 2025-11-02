@@ -97,6 +97,15 @@
           <span class="help-text">Maart</span>
         </div>
         <button onclick="savePriorityPeriod()" class="btn-primary">Opslaan</button>
+        
+        <div style="margin-top: 2em; padding: 1em; background: #fff3cd; border-radius: 8px; border: 2px solid #ffc107;">
+          <h5 style="margin-top: 0;">⚠️ Test Modus</h5>
+          <p style="margin: 0.5em 0;">Schakel de prioriteitsperiode tijdelijk uit om te testen zonder te wachten tot januari.</p>
+          <button onclick="togglePriorityPeriodBypass()" id="priorityBypassBtn" class="btn-secondary" style="margin-top: 0.5em;">
+            Prioriteitsperiode Uitschakelen
+          </button>
+          <div id="priorityBypassStatus" style="margin-top: 0.5em; font-weight: bold;"></div>
+        </div>
       </div>
       
       <!-- Zomer maanden verdeling -->
@@ -183,8 +192,8 @@
           <label for="settingsRank">Rang binnen familie:</label>
           <select id="settingsRank">
             <option value="">Geen rang</option>
-            <option value="ouder">Ouder</option>
-            <option value="kind">Kind</option>
+            <option value="eigenaar">Eigenaar</option>
+            <option value="niet-eigenaar">Niet-Eigenaar</option>
           </select>
         </div>
         

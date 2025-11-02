@@ -66,7 +66,7 @@ function initTestUsers() {
       role: 'user',
       approved: true,
       family: 'B',
-      rank: 'ouder',
+      rank: 'eigenaar',
       settings: {
         canBook: true,
         maxReservationsPerYear: 5,
@@ -86,7 +86,7 @@ function initTestUsers() {
       role: 'user',
       approved: true,
       family: 'A',
-      rank: 'ouder',
+      rank: 'eigenaar',
       settings: {
         canBook: true,
         maxReservationsPerYear: 5,
@@ -100,11 +100,11 @@ function initTestUsers() {
   users.forEach(u => {
     if (u.id === 'test1' && !u.family) {
       u.family = 'B';
-      u.rank = 'ouder';
+      u.rank = 'eigenaar';
     }
     if (u.id === 'test2' && !u.family) {
       u.family = 'A';
-      u.rank = 'ouder';
+      u.rank = 'eigenaar';
     }
   });
   
@@ -131,7 +131,7 @@ function register(name, email, password) {
     role: 'user',
     approved: false, // Moet goedgekeurd worden door admin
     family: null, // 'A' of 'B' - wordt ingesteld door admin
-    rank: null, // 'ouder' of 'kind' - wordt ingesteld door admin
+    rank: null, // 'eigenaar' of 'niet-eigenaar' - wordt ingesteld door admin
     settings: {
       canBook: false, // Standaard geen boekingsrechten tot goedgekeurd
       maxReservationsPerYear: 5,

@@ -5,7 +5,7 @@ const STORAGE_KEY = 'santantoni_reservations';
 const MESSAGES_KEY = 'santantoni_messages';
 
 // NIEUWE Prijsconfiguratie per appartement, familie en seizoen
-// Zomer = Juni en Juli (maanden 5 en 6)
+// Zomer = Juli en Augustus (maanden 6 en 7)
 const PRIJZEN = {
   '35': { // Appartement 35
     'A': { zomer: 58, laag: 43 },      // Familie A: €58 zomer, €43 laag
@@ -205,28 +205,28 @@ function getSeizoenNaam(seizoen) {
   return namen[seizoen] || seizoen;
 }
 
-// Check seizoensregels (zomermaanden alleen hele weken zaterdag-zaterdag)
+// Check seizoensregels (alleen juli-augustus: alleen hele weken zaterdag-zaterdag, max 2 weken)
+// BELANGRIJK: Deze regel geldt voor ALLES (inclusief admin) - niemand mag halve weken in hoogseizoen
 function checkSeizoenRules(aankomst, vertrek, user = null) {
-  // Admin kan altijd reserveren zonder beperkingen
-  if (user && user.role === 'admin') {
-    return { valid: true };
-  }
-  
   const start = new Date(aankomst);
   const end = new Date(vertrek);
   const maand = start.getMonth();
   
-  // Juni, Juli, Augustus, September (5, 6, 7, 8)
-  if (maand >= 5 && maand <= 8) {
+  // Alleen juli en augustus (6 en 7)
+  if (maand === 6 || maand === 7) {
     const dayOfWeek = start.getDay(); // 0=zondag, 6=zaterdag
     const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
     
-    // Moet zaterdag zijn (6) en minimaal 7 dagen
+    // Moet zaterdag zijn (6) en minimaal 7 dagen - GELDT VOOR ALLES (zelfs admin)
     if (dayOfWeek !== 6) {
-      return { valid: false, message: 'In juni, juli, augustus en september mag je alleen vanaf zaterdag reserveren.' };
+      return { valid: false, message: 'In juli en augustus mag je alleen vanaf zaterdag reserveren.' };
     }
     if (days < 7 || days % 7 !== 0) {
-      return { valid: false, message: 'In juni, juli, augustus en september zijn alleen hele weken (zaterdag-zaterdag) mogelijk.' };
+      return { valid: false, message: 'In juli en augustus zijn alleen hele weken (zaterdag-zaterdag) mogelijk.' };
+    }
+    // Check maximaal 2 weken in juli-augustus
+    if (days > 14) {
+      return { valid: false, message: 'In juli en augustus mag je maximaal 2 weken boeken. Je probeert ' + Math.ceil(days / 7) + ' weken te boeken.' };
     }
   }
   
@@ -253,6 +253,23 @@ function getPriorityFamilyForMonth(maand, year, appartement) {
   return null; // Geen voorrang buiten zomermaanden
 }
 
+// Helper: check of reservering valt in voorkeursmaanden (juni-september)
+function isDateInPreferredMonths(aankomst, vertrek) {
+  const start = new Date(aankomst);
+  const end = new Date(vertrek);
+  const checkDate = new Date(start);
+  
+  while (checkDate < end) {
+    const month = checkDate.getMonth();
+    if (month >= 5 && month <= 8) { // Juni-september
+      return true;
+    }
+    checkDate.setDate(checkDate.getDate() + 1);
+  }
+  
+  return false;
+}
+
 // Check voorseizoen constraint (1 jan - 31 mrt: alleen voorgang families)
 // In prioriteitsperiode mag je maximaal 2 weken boeken in voorkeursmaanden (juni-september)
 function checkPreseasonConstraint(aankomst, vertrek, user, apartement) {
@@ -265,6 +282,11 @@ function checkPreseasonConstraint(aankomst, vertrek, user, apartement) {
   const reservationStart = new Date(aankomst);
   const reservationEnd = new Date(vertrek);
   const year = reservationStart.getFullYear();
+  
+  // Check of bypass actief is (test modus)
+  if (typeof isPriorityPeriodBypassed === 'function' && isPriorityPeriodBypassed()) {
+    return { valid: true }; // Skip alle prioriteits checks
+  }
   
   // Voorseizoen: 1 januari tot 31 maart
   if (today.getMonth() < 3) { // Voor 1 april
@@ -482,7 +504,7 @@ function generateCalendarForApartment(apartment) {
       dayDiv.classList.add('today');
     }
     
-    // Check of dit hoogseizoen is (juni-september) en of het een zaterdag is
+    // Check of dit hoogseizoen is (juli-augustus) en of het een zaterdag is
     const isInHighSeason = isHighSeason(date);
     const isSaturday = date.getDay() === 6; // 6 = zaterdag
     if (isInHighSeason && isSaturday && isCurrentMonth) {
@@ -504,9 +526,14 @@ function generateCalendarForApartment(apartment) {
       const apartmentReservations = dateReservations.filter(r => r.appartement === apartment);
       isApproved = apartmentReservations.some(r => r.status === 'goedgekeurd' || r.status === 'betaald');
       
+      // Check if any reservation is provisional
+      const hasProvisional = apartmentReservations.some(r => r.isProvisional === true);
+      
       if (isReserved) {
         dayDiv.classList.add(`reserved-${apartment}`);
-        if (isApproved) {
+        if (hasProvisional) {
+          dayDiv.classList.add('reserved-provisional'); // Lichter dan pending
+        } else if (isApproved) {
           dayDiv.classList.add('reserved-approved');
         } else {
           dayDiv.classList.add('reserved-pending');
@@ -521,23 +548,32 @@ function generateCalendarForApartment(apartment) {
       const allDateReservations = dateReservations;
       isApproved = allDateReservations.some(r => r.status === 'goedgekeurd' || r.status === 'betaald');
       
+      // Check if any reservation is provisional
+      const hasProvisional = allDateReservations.some(r => r.isProvisional === true);
+      
       if (reservedA && reservedB) {
         dayDiv.classList.add('reserved');
-        if (isApproved) {
+        if (hasProvisional) {
+          dayDiv.classList.add('reserved-provisional');
+        } else if (isApproved) {
           dayDiv.classList.add('reserved-approved');
         } else {
           dayDiv.classList.add('reserved-pending');
         }
       } else if (reservedA) {
         dayDiv.classList.add('reserved-A');
-        if (isApproved) {
+        if (hasProvisional) {
+          dayDiv.classList.add('reserved-provisional');
+        } else if (isApproved) {
           dayDiv.classList.add('reserved-approved');
         } else {
           dayDiv.classList.add('reserved-pending');
         }
       } else if (reservedB) {
         dayDiv.classList.add('reserved-B');
-        if (isApproved) {
+        if (hasProvisional) {
+          dayDiv.classList.add('reserved-provisional');
+        } else if (isApproved) {
           dayDiv.classList.add('reserved-approved');
         } else {
           dayDiv.classList.add('reserved-pending');
@@ -574,97 +610,109 @@ function generateCalendarForApartment(apartment) {
        
       // Alleen clickable als niet gereserveerd
       if (!isReserved && isCurrentMonth) {
-        // Check of dit hoogseizoen is (juni-september)
+        // Check of dit hoogseizoen is (juli-augustus)
         const isInHighSeason = isHighSeason(date);
         const isSaturday = date.getDay() === 6; // 6 = zaterdag
         const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
         const isAdmin = user && user.role === 'admin';
         
-        // In hoogseizoen: alleen zaterdagen klikbaar (behalve admin)
-        if (isInHighSeason && !isAdmin && !isSaturday) {
+        // In hoogseizoen: alleen zaterdagen klikbaar (GELDT VOOR ALLES, inclusief admin)
+        if (isInHighSeason && !isSaturday) {
           // Geen clickable class toevoegen - niet klikbaar
-          dayDiv.title = 'In hoogseizoen (juni-september) kun je alleen vanaf zaterdag boeken';
+          dayDiv.title = 'In juli en augustus kun je alleen vanaf zaterdag boeken';
           dayDiv.style.cursor = 'not-allowed';
           dayDiv.style.opacity = '0.6';
           // Geen hover events voor niet-klikbare dagen
         } else {
-          // Normaal klikbaar
-          dayDiv.classList.add('clickable');
-          dayDiv.style.cursor = 'pointer';
-          dayDiv.dataset.date = dateStr;
-          dayDiv.addEventListener('click', () => handleDateClick(date, apartment));
+          // Normaal klikbaar - maar check of dit een geldige selectie is
+          // Als er al een startdatum is in hoogseizoen, einddatum moet ook zaterdag zijn
+          const selection = selectionState[apartment];
+          const hasStartInHighSeason = selection.startDate && isHighSeason(new Date(selection.startDate));
           
-          // Hover effect (alleen voor klikbare dagen)
-          dayDiv.addEventListener('mouseenter', () => {
-           // Altijd blauw bij hover tenzij beide datums al gekozen
-           if (!selection.startDate || !selection.endDate) {
-             const hoverDate = date;
-             const hoverDateStr = formatDate(hoverDate);
-             
-             // Als er een start is, bepaal hoeken
-             if (selection.startDate && !selection.endDate) {
-               const calendarDays = calendar.querySelectorAll('.calendar-day');
-               const startDate = new Date(selection.startDate);
-               const startDateStr = formatDate(startDate);
-               
-               // Check of we over de startdatum zelf hoveren
-               if (hoverDateStr === startDateStr) {
-                 // Hover over startdatum: blijf blauw (selected-start blijft actief, hover-day toevoegen voor extra highlight)
-                 dayDiv.classList.add('hover-day');
-               } else {
-                 // Hover over andere dag: altijg hover-day toevoegen aan hoverende dag met rechter hoeken
-                 dayDiv.classList.add('hover-day');
-                 dayDiv.classList.add('hover-end');
-               }
-               
-               // Check eerst of er bezette dagen in het bereik zitten
-               const reservations = getReservations();
-               let hasBlockedDays = false;
-               const checkDate = new Date(startDate);
-               while (checkDate < hoverDate) {
-                 if (isDateReservedForApartment(checkDate, apartment, reservations)) {
-                   hasBlockedDays = true;
-                   break;
-                 }
-                 checkDate.setDate(checkDate.getDate() + 1);
-               }
-               
-               calendarDays.forEach(dayEl => {
-                 const dayDateStr = dayEl.dataset.date;
-                 if (dayDateStr) {
-                   const dayDate = new Date(dayDateStr);
-                   
-                   // Als deze dag tussen start en hover zit
-                   if (hoverDate > startDate && dayDate > startDate && dayDate < hoverDate) {
-                     // Als er bezette dagen zijn, maak alles rood
-                     if (hasBlockedDays) {
-                       dayEl.classList.add('hover-range-blocked');
-                     } else {
-                       dayEl.classList.add('hover-range');
-                     }
-                   }
-                   
-                   // Start datum blijft blauw (selected-start class blijft, maar hover-day kan erbij voor highlight)
-                   if (dayDateStr === startDateStr) {
-                     dayEl.classList.add('hover-day'); // Toevoegen voor highlight, selected-start blijft blauw
-                   }
-                 }
-               });
-             } else {
-               // Geen start datum, dus alle hoeken rond
-               dayDiv.classList.add('hover-day');
-               dayDiv.classList.add('hover-start');
-             }
-           }
-         });
-          
-          dayDiv.addEventListener('mouseleave', () => {
-            dayDiv.classList.remove('hover-day', 'hover-start', 'hover-end');
-            const calendarDays = calendar.querySelectorAll('.calendar-day');
-            calendarDays.forEach(dayEl => {
-              dayEl.classList.remove('hover-range', 'hover-range-blocked');
+          if (hasStartInHighSeason && !isSaturday) {
+            // Er is een start in hoogseizoen maar dit is geen zaterdag - niet klikbaar als eind
+            dayDiv.title = 'In juli en augustus mag je alleen hele weken boeken. Selecteer een zaterdag als einddatum.';
+            dayDiv.style.cursor = 'not-allowed';
+            dayDiv.style.opacity = '0.6';
+            // Geen hover events voor niet-klikbare dagen
+          } else {
+            // Normaal klikbaar
+            dayDiv.classList.add('clickable');
+            dayDiv.style.cursor = 'pointer';
+            dayDiv.dataset.date = dateStr;
+            dayDiv.addEventListener('click', () => handleDateClick(date, apartment));
+            
+            // Hover effect (alleen voor klikbare dagen)
+            dayDiv.addEventListener('mouseenter', () => {
+              // Altijd blauw bij hover tenzij beide datums al gekozen
+              if (!selection.startDate || !selection.endDate) {
+                const hoverDate = date;
+                const hoverDateStr = formatDate(hoverDate);
+                
+                // Als er een start is, bepaal hoeken
+                if (selection.startDate && !selection.endDate) {
+                  const calendarDays = calendar.querySelectorAll('.calendar-day');
+                  const startDate = new Date(selection.startDate);
+                  const startDateStr = formatDate(startDate);
+                  
+                  // Check eerst of er bezette dagen in het bereik zitten
+                  const reservations = getReservations();
+                  let hasBlockedDays = false;
+                  const checkDate = new Date(startDate);
+                  while (checkDate < hoverDate) {
+                    if (isDateReservedForApartment(checkDate, apartment, reservations)) {
+                      hasBlockedDays = true;
+                      break;
+                    }
+                    checkDate.setDate(checkDate.getDate() + 1);
+                  }
+                  
+                  // Loop door alle calendar dagen en pas hover styling toe
+                  calendarDays.forEach(dayEl => {
+                    const dayDateStr = dayEl.dataset.date;
+                    if (dayDateStr) {
+                      const dayDate = new Date(dayDateStr);
+                      
+                      // Startdatum: blijf altijd blauw, voeg hover-day toe voor highlight
+                      if (dayDateStr === startDateStr) {
+                        dayEl.classList.add('hover-day'); // Voor highlight, selected-start blijft blauw
+                        return; // Skip verdere styling voor startdatum
+                      }
+                      
+                      // Als deze dag de hoverende dag is (niet de startdatum)
+                      if (dayDateStr === hoverDateStr) {
+                        // Hover over andere dag: hover-day toevoegen met rechter hoeken
+                        dayEl.classList.add('hover-day');
+                        dayEl.classList.add('hover-end');
+                      }
+                      
+                      // Als deze dag tussen start en hover zit
+                      if (hoverDate > startDate && dayDate > startDate && dayDate < hoverDate) {
+                        // Als er bezette dagen zijn, maak alles rood
+                        if (hasBlockedDays) {
+                          dayEl.classList.add('hover-range-blocked');
+                        } else {
+                          dayEl.classList.add('hover-range');
+                        }
+                      }
+                    }
+                  });
+                } else {
+                  // Geen start datum, dus alle hoeken rond
+                  dayDiv.classList.add('hover-day');
+                  dayDiv.classList.add('hover-start');
+                }
+              }
             });
-          });
+            
+            dayDiv.addEventListener('mouseleave', () => {
+              dayDiv.classList.remove('hover-day', 'hover-start', 'hover-end');
+              const calendarDays = calendar.querySelectorAll('.calendar-day');
+              calendarDays.forEach(dayEl => {
+                dayEl.classList.remove('hover-range', 'hover-range-blocked');
+              });
+            });
+          }
         }
       }
      }
@@ -770,10 +818,10 @@ function findSaturdayOfWeek(date) {
   return d;
 }
 
-// Helper: check of een datum in hoogseizoen valt (juni-september)
+// Helper: check of een datum in hoogseizoen valt (alleen juli en augustus)
 function isHighSeason(date) {
-  const month = date.getMonth(); // 0=januari, 5=juni, 8=september
-  return month >= 5 && month <= 8; // Juni-september
+  const month = date.getMonth(); // 0=januari, 6=juli, 7=augustus
+  return month === 6 || month === 7; // Alleen juli en augustus
 }
 
 // Handle klik op datum voor selectie
@@ -786,36 +834,44 @@ function handleDateClick(date, apartment) {
   
   // Als geen start datum, maak dit de start
   if (!selection.startDate) {
-    // Extra check: in hoogseizoen alleen zaterdagen klikbaar (behalve admin)
+    // Extra check: in hoogseizoen (juli-augustus) alleen zaterdagen klikbaar (GELDT VOOR ALLES, inclusief admin)
     const isInHighSeason = isHighSeason(date);
     const isSaturday = date.getDay() === 6; // 6 = zaterdag
     
-    if (isInHighSeason && !isAdmin && !isSaturday) {
-      // Niet zaterdag in hoogseizoen - blokkeer klik
-      alert('In het hoogseizoen (juni-september) kun je alleen vanaf zaterdag boeken. Selecteer een zaterdag als startdatum.');
+    if (isInHighSeason && !isSaturday) {
+      // Niet zaterdag in hoogseizoen - blokkeer klik (ook voor admin)
+      alert('In juli en augustus kun je alleen vanaf zaterdag boeken. Selecteer een zaterdag als startdatum.');
       return; // Stop hier, voer geen selectie uit
     }
     
-    // Als hoogseizoen (juni-september) EN geen admin EN het is een zaterdag, selecteer automatisch de hele week (zaterdag-zaterdag)
-    if (isInHighSeason && !isAdmin && isSaturday) {
-      selection.startDate = date;
-      
-      // Einddatum is 7 dagen later (volgende zaterdag)
-      const endSaturday = new Date(date);
-      endSaturday.setDate(date.getDate() + 7);
-      selection.endDate = endSaturday;
-      
-      // Toon een melding dat de hele week is geselecteerd
-      alert('In het hoogseizoen (juni-september) kun je alleen hele weken boeken. De hele week vanaf deze zaterdag is geselecteerd.');
-    } else {
-      selection.startDate = date;
-    }
+    // In hoogseizoen EN het is een zaterdag: alleen de zaterdag selecteren als start (geen automatische week)
+    // User kan dan zelf kiezen hoeveel weken (1 of 2) door op een andere zaterdag te klikken
+    selection.startDate = date;
     generateCalendarForApartment(apartment);
     updateReserveButton(apartment);
   }
   // Als start datum maar geen end, maak dit de end (moet na start zijn)
   else if (!selection.endDate) {
     if (date > selection.startDate) {
+      // In hoogseizoen: einddatum moet ook een zaterdag zijn (hele weken)
+      const isInHighSeason = isHighSeason(date);
+      const isSaturday = date.getDay() === 6; // 6 = zaterdag
+      
+      // Check of het maximaal 2 weken is in juli-augustus
+      if (isInHighSeason && isSaturday) {
+        const nights = Math.ceil((date - selection.startDate) / (1000 * 60 * 60 * 24));
+        if (nights > 14) {
+          alert('In juli en augustus mag je maximaal 2 weken boeken. Je probeert ' + Math.ceil(nights / 7) + ' weken te boeken.');
+          return;
+        }
+      }
+      
+      if (isInHighSeason && !isSaturday) {
+        // Niet zaterdag als einddatum in hoogseizoen - blokkeer
+        alert('In juli en augustus mag je alleen hele weken boeken. Selecteer een zaterdag als einddatum.');
+        return; // Stop hier, voer geen selectie uit
+      }
+      
       // Check of er bezette dagen tussen start en eind zitten
       const reservations = getReservations();
       let hasBlockedDays = false;
@@ -1435,14 +1491,80 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     
-    // Check overlap
-    if (hasOverlap(apartement, aankomst, vertrek)) {
-      alert(`Appartement ${apartement} is al gereserveerd in deze periode!`);
-      return;
-    }
-    
     // Bereken prijs met kortingen
     const priceInfo = user ? calculatePriceWithDiscounts(apartement, aankomst, vertrek, user) : calculatePrice(apartement, aankomst, vertrek, null);
+    
+    // Check of deze reservering in prioriteitsperiode is voor voorkeursmaanden
+    const todayDate = new Date();
+    // Check bypass eerst (test modus)
+    const bypassActive = typeof isPriorityPeriodBypassed === 'function' && isPriorityPeriodBypassed();
+    const isPriorityPeriod = !bypassActive && todayDate.getMonth() < 3; // Jan-Mar
+    const isInPreferredMonths = isDateInPreferredMonths(aankomst, vertrek); // Juni-Sept
+    
+    // Als niet-eigenaar in prioriteitsperiode voor voorkeursmaanden: provisional booking
+    const isProvisional = isPriorityPeriod && isInPreferredMonths && user && user.rank === 'niet-eigenaar';
+    
+    // Check overlap - verwijder provisionals van niet-eigenaars als deze booking die overschrijft
+    const allReservations = getReservations();
+    let removedProvisionalReservations = [];
+    
+    if (isProvisional) {
+      // Niet-eigenaar probeert te boeken in prioriteitsperiode - check overlap met normale reserveringen
+      if (hasOverlap(apartement, aankomst, vertrek)) {
+        alert(`Appartement ${apartement} is al gereserveerd in deze periode!`);
+        return;
+      }
+      
+      // Waarschuwing voor niet-eigenaar
+      const warningMsg = '⚠️ PROVISIONAL BOOKING\n\nJe boekingsperiode valt in de prioriteitsperiode voor voorkeursmaanden.\n' +
+                        'Dit is een PROVISIONAL booking: Eigenaars kunnen nog steeds over jouw reservering boeken.\n\n' +
+                        'Als er geen eigenaar boekt, moet je vóór 1 april betalen om je reservering te bevestigen.\n' +
+                        'Je reservering wordt lichter grijs weergegeven op de kalender.';
+      if (confirm(warningMsg)) {
+        // Continue met booking
+      } else {
+        return; // Gebruiker wilt niet doorgaan
+      }
+    } else {
+      // Eigenaar of admin probeert te boeken - check overlap en verwijder provisionals die overlappen
+      const overlappedProvis = allReservations.filter(res => {
+        if (res.appartement !== apartement) return false;
+        if (!res.isProvisional) return false; // Alleen provisionals
+        if (res.userId === (user ? user.id : null)) return false; // Niet je eigen provisional
+        
+        const resStart = new Date(res.aankomst);
+        const resEnd = new Date(res.vertrek);
+        const newStart = new Date(aankomst);
+        const newEnd = new Date(vertrek);
+        
+        return newStart < resEnd && newEnd > resStart;
+      });
+      
+      if (overlappedProvis.length > 0) {
+        // Waarschuw eigenaar dat provisionals verwijderd worden
+        const provNames = overlappedProvis.map(p => p.createdBy).join(', ');
+        const overrideMsg = `⚠️ Je gaat over provisional bookings heen!\n\n` +
+                           `De volgende provisionals worden verwijderd:\n${provNames}\n\n` +
+                           `Als eigenaar mag je dit doen tijdens de prioriteitsperiode.\n` +
+                           `Bevestig om door te gaan.`;
+        
+        if (confirm(overrideMsg)) {
+          // Verwijder overlappende provisionals
+          for (const prov of overlappedProvis) {
+            await deleteReservation(prov.id);
+            removedProvisionalReservations.push(prov.createdBy);
+          }
+        } else {
+          return; // Gebruiker wilt niet doorgaan
+        }
+      }
+      
+      // Check overlap met normale reserveringen (na verwijdering provisionals)
+      if (hasOverlap(apartement, aankomst, vertrek)) {
+        alert(`Appartement ${apartement} is al gereserveerd in deze periode!`);
+        return;
+      }
+    }
     
     // Reservering toevoegen
     const reservation = {
@@ -1456,7 +1578,8 @@ document.addEventListener('DOMContentLoaded', () => {
       prijs: priceInfo.total,
       status: 'in_afwachting',
       userId: user ? user.id : null,
-      createdBy: user ? user.name : naam
+      createdBy: user ? user.name : naam,
+      isProvisional: isProvisional || false
     };
     
     // Wait for async addReservation to complete

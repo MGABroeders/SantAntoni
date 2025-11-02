@@ -486,11 +486,26 @@ body {
     font-size: 0.7em;
   }
   
-  .calendar-day.high-season-saturday.clickable:hover {
+  .calendar-day.high-season-saturday.clickable:hover:not(.selected-start):not(.selected-end):not(.selected-range) {
     background: linear-gradient(135deg, #ffe6cc 0%, #ffd9b3 100%) !important;
     border-color: #FF8C00;
   }
   
+   /* Provisional reservations (niet-eigenaar in prioriteitsperiode) - lichtste grijs */
+   .calendar-day.reserved-provisional,
+   .calendar-day.reserved-A.reserved-provisional,
+   .calendar-day.reserved-B.reserved-provisional,
+   .calendar-day.reserved.reserved-provisional {
+     background: repeating-linear-gradient(
+       45deg,
+       #fafafa,
+       #fafafa 5px,
+       #e8e8e8 5px,
+       #e8e8e8 10px
+     );
+     border-color: #bbb;
+   }
+   
    /* Pending reservations (in afwachting) - lichter grijs */
    .calendar-day.reserved-pending,
    .calendar-day.reserved-A.reserved-pending,
@@ -588,45 +603,71 @@ body {
      transform: scale(1.05);
    }
    
-   /* Selectie styling - Booking.com style */
-   .calendar-day.selected-start {
-     background: #2196F3 !important;
-     border-radius: 6px 0 0 6px;
-   }
-   
-   .calendar-day.selected-start .calendar-day-number {
-     color: white;
-   }
-   
-   .calendar-day.selected-end {
-     background: #2196F3 !important;
-     border-radius: 0 6px 6px 0;
-   }
-   
-   .calendar-day.selected-end .calendar-day-number {
-     color: white;
-   }
-   
-   .calendar-day.selected-range {
-     background: #E0E0E0 !important;
-   }
-   
-   .calendar-day.clickable {
-     cursor: pointer;
-   }
-   
-  .calendar-day.clickable:hover:not(.selected-start):not(.selected-end):not(.selected-range):not(.hover-day) {
-    background: #f5f5f5 !important;
+  /* Selectie styling - Booking.com style */
+  .calendar-day.selected-start {
+    background: #2196F3 !important;
+    border-radius: 6px 0 0 6px;
   }
   
-  /* Hover styling */
-  .calendar-day.hover-day {
+  .calendar-day.selected-start .calendar-day-number {
+    color: white;
+  }
+  
+  /* Selected-start blijft blauw ook bij hover - HOGE PRIORITEIT */
+  .calendar-day.selected-start.hover-day,
+  .calendar-day.selected-start:hover,
+  .calendar-day.hover-day.selected-start,
+  .calendar-day.high-season-saturday.selected-start,
+  .calendar-day.high-season-saturday.selected-start:hover,
+  .calendar-day.high-season-saturday.selected-start.hover-day {
+    background: #2196F3 !important;
+    border-color: #2196F3 !important;
+    border: 2px solid #2196F3 !important;
+  }
+  
+  .calendar-day.selected-start.hover-day .calendar-day-number,
+  .calendar-day.selected-start:hover .calendar-day-number,
+  .calendar-day.hover-day.selected-start .calendar-day-number,
+  .calendar-day.high-season-saturday.selected-start .calendar-day-number,
+  .calendar-day.high-season-saturday.selected-start:hover .calendar-day-number,
+  .calendar-day.high-season-saturday.selected-start.hover-day .calendar-day-number {
+    color: white !important;
+  }
+  
+  .calendar-day.selected-end {
+    background: #2196F3 !important;
+    border-radius: 0 6px 6px 0;
+  }
+  
+  .calendar-day.selected-end .calendar-day-number {
+    color: white;
+  }
+  
+  /* Selected-end blijft blauw ook bij hover */
+  .calendar-day.selected-end.hover-day {
     background: #2196F3 !important;
   }
   
-  .calendar-day.hover-day .calendar-day-number {
-    color: white;
+  .calendar-day.selected-range {
+    background: #E0E0E0 !important;
   }
+  
+  .calendar-day.clickable {
+    cursor: pointer;
+  }
+  
+ .calendar-day.clickable:hover:not(.selected-start):not(.selected-end):not(.selected-range):not(.hover-day) {
+   background: #f5f5f5 !important;
+ }
+ 
+ /* Hover styling */
+ .calendar-day.hover-day:not(.selected-start):not(.selected-end) {
+   background: #2196F3 !important;
+ }
+ 
+ .calendar-day.hover-day:not(.selected-start):not(.selected-end) .calendar-day-number {
+   color: white;
+ }
   
   .calendar-day.hover-start {
     border-radius: 6px !important;
