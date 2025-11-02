@@ -210,13 +210,39 @@ function loadTransactions() {
   if (!checkAdminAccess()) return;
   
   const container = document.getElementById('transactionsList');
+  if (!container) {
+    console.error('transactionsList container not found');
+    return;
+  }
+  
+  // Show loading state
+  container.innerHTML = '<p class="empty-state">Reserveringen laden...</p>';
+  
+  // Get reservations - try async first, fallback to sync
+  let reservations = [];
+  if (typeof getReservationsAsync === 'function') {
+    // Try async version
+    getReservationsAsync().then(res => {
+      reservations = res || [];
+      renderReservations(reservations, container);
+    }).catch(err => {
+      console.error('Error loading reservations async:', err);
+      // Fallback to sync
+      reservations = typeof getReservations === 'function' ? getReservations() : [];
+      renderReservations(reservations, container);
+    });
+  } else {
+    // Use sync version
+    reservations = typeof getReservations === 'function' ? getReservations() : [];
+    renderReservations(reservations, container);
+  }
+}
+
+function renderReservations(reservations, container) {
   if (!container) return;
   
-  // Get reservations
-  const reservations = typeof getReservations === 'function' ? getReservations() : [];
-  
   // Get users to find user info for reservations
-  const users = getUsers();
+  const users = typeof getUsers === 'function' ? getUsers() : [];
   
   if (reservations.length === 0) {
     container.innerHTML = '<p class="empty-state">Nog geen reserveringen</p>';
@@ -341,6 +367,17 @@ function initAdminTabs() {
   const tabs = document.querySelectorAll('.admin-tab');
   const contents = document.querySelectorAll('.admin-tab-content');
   
+  // Load initial active tab content
+  const activeTab = document.querySelector('.admin-tab.active');
+  if (activeTab) {
+    const initialTab = activeTab.dataset.tab;
+    if (initialTab === 'accounts') {
+      loadUsers();
+    } else if (initialTab === 'transactions') {
+      loadTransactions();
+    }
+  }
+  
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
       const targetTab = tab.dataset.tab;
@@ -367,8 +404,11 @@ function initAdminTabs() {
 document.addEventListener('DOMContentLoaded', () => {
   if (!checkAdminAccess()) return;
   
-  initAdminTabs();
-  loadUsers();
+  // Wait a bit for Firebase to initialize if needed
+  setTimeout(() => {
+    initAdminTabs();
+    // loadUsers() will be called by initAdminTabs if accounts tab is active
+  }, 500);
   
   // User settings form
   const settingsForm = document.getElementById('userSettingsForm');
