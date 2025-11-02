@@ -1176,6 +1176,53 @@ body {
       gap: 2em;
     }
     
+    /* Kalender mobiele styling - maak kleiner zodat het horizontaal past */
+    .calendar-section {
+      padding: 1em;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      width: 100%;
+      max-width: 100vw;
+      box-sizing: border-box;
+    }
+    
+    .calendar-apartment,
+    #calendar {
+      gap: 2px;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    
+    .calendar-apartment .calendar-header,
+    #calendar .calendar-header {
+      padding: 0.3em 0.1em;
+      font-size: 0.7em;
+    }
+    
+    .calendar-apartment .calendar-day,
+    #calendar .calendar-day {
+      min-height: 40px;
+      padding: 0.3em 0.1em;
+      font-size: 0.75em;
+    }
+    
+    .calendar-apartment .calendar-day-number,
+    #calendar .calendar-day-number {
+      font-size: 0.8em;
+    }
+    
+    .calendar-apartment .calendar-day-reservation,
+    #calendar .calendar-day-reservation {
+      font-size: 0.55em;
+      padding: 1px 2px;
+    }
+    
+    .calendar-wrapper {
+      min-width: 0;
+      overflow-x: auto;
+    }
+    
     .reservation-item {
       flex-direction: column;
       align-items: flex-start;
