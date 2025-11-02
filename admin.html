@@ -231,6 +231,40 @@
   <script src="auth-ui.js"></script>
   <script src="script.js"></script>
   <script src="admin.js"></script>
+  
+  <!-- Initialize Firebase and set up real-time listeners -->
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      if (typeof initFirebase === 'function') {
+        initFirebase();
+        
+        // Real-time listeners voor directe updates
+        setTimeout(() => {
+          // Real-time listener voor reserveringen - update admin lijst automatisch
+          if (typeof subscribeToReservations === 'function') {
+            subscribeToReservations((reservations) => {
+              console.log('Admin: Reserveringen update ontvangen:', reservations.length);
+              // Update localStorage
+              localStorage.setItem('santantoni_reservations', JSON.stringify(reservations));
+              
+              // Reload admin reservations list if transactions tab is active
+              const transactionsTab = document.querySelector('.admin-tab[data-tab="transactions"]');
+              if (transactionsTab && transactionsTab.classList.contains('active')) {
+                if (typeof loadTransactions === 'function') {
+                  loadTransactions();
+                }
+              }
+              
+              // Also update calendar if it exists (for homepage)
+              if (typeof generateCalendar === 'function') {
+                generateCalendar();
+              }
+            });
+          }
+        }, 1000);
+      }
+    });
+  </script>
 </body>
 </html>
 
