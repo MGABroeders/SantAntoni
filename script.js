@@ -249,7 +249,7 @@ function getPriorityFamilyForMonth(maand, year, appartement) {
 }
 
 // Check voorseizoen constraint (1 jan - 31 mrt: alleen voorgang families)
-function checkPreseasonConstraint(aankomst, user, appartement) {
+function checkPreseasonConstraint(aankomst, user, apartement) {
   const today = new Date();
   const reservationDate = new Date(aankomst);
   const year = reservationDate.getFullYear();
@@ -259,9 +259,9 @@ function checkPreseasonConstraint(aankomst, user, appartement) {
     // Check of dit een zomermaand is (juni t/m september = 5 t/m 8)
     const reservationMonth = reservationDate.getMonth();
     if (reservationMonth >= 5 && reservationMonth <= 8) {
-      const priorityFamily = getPriorityFamilyForMonth(reservationMonth, year, appartement);
+      const priorityFamily = getPriorityFamilyForMonth(reservationMonth, year, apartement);
       if (priorityFamily && user.family !== priorityFamily) {
-        return { valid: false, message: `In het voorseizoen (januari-maart) mogen alleen leden van familie ${priorityFamily} de zomermaanden reserveren voor Appartement ${appartement === 'A' ? '35' : '36'}.` };
+        return { valid: false, message: `In het voorseizoen (januari-maart) mogen alleen leden van familie ${priorityFamily} de zomermaanden reserveren voor Appartement ${apartement === 'A' ? '35' : '36'}.` };
       }
     }
   }
@@ -1047,22 +1047,22 @@ document.addEventListener('DOMContentLoaded', () => {
       function updatePrice() {
       const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
       const appartementElement = document.getElementById('appartement');
-      const appartement = appartementElement ? appartementElement.value : null;
+      const apartement = appartementElement ? appartementElement.value : null;
       const aankomst = document.getElementById('aankomst')?.value;
       const vertrek = document.getElementById('vertrek')?.value;
       const priceDisplay = document.getElementById('priceDisplay');
       
-      console.log('updatePrice called:', { user, appartement, aankomst, vertrek });
+      console.log('updatePrice called:', { user, apartement, aankomst, vertrek });
       
-      // Ensure appartement is a string value, not an element
-      if (!appartement || typeof appartement !== 'string') {
-        console.warn('Appartement is not a valid string:', appartement);
+      // Ensure apartement is a string value, not an element
+      if (!apartement || typeof apartement !== 'string') {
+        console.warn('Apartement is not a valid string:', apartement);
         if (priceDisplay) priceDisplay.style.display = 'none';
         return;
       }
       
-      if (appartement && aankomst && vertrek && new Date(aankomst) < new Date(vertrek)) {
-        const priceInfo = user ? calculatePriceWithDiscounts(appartement, aankomst, vertrek, user) : calculatePrice(appartement, aankomst, vertrek, null);
+      if (apartement && aankomst && vertrek && new Date(aankomst) < new Date(vertrek)) {
+        const priceInfo = user ? calculatePriceWithDiscounts(apartement, aankomst, vertrek, user) : calculatePrice(apartement, aankomst, vertrek, null);
         
         console.log('priceInfo:', priceInfo);
         
@@ -1265,7 +1265,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
-    const appartement = document.getElementById('appartement').value;
+    const apartement = document.getElementById('appartement').value;
     const naam = user ? user.name : document.getElementById('naam').value;
     const email = user ? user.email : document.getElementById('email').value;
     const aankomst = document.getElementById('aankomst').value;
@@ -1296,7 +1296,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Check voorseizoen constraint
     if (user) {
-      const preseasonCheck = checkPreseasonConstraint(aankomst, user, appartement);
+      const preseasonCheck = checkPreseasonConstraint(aankomst, user, apartement);
       if (!preseasonCheck.valid) {
         alert(preseasonCheck.message);
         return;
@@ -1304,17 +1304,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     // Check overlap
-    if (hasOverlap(appartement, aankomst, vertrek)) {
-      alert(`Appartement ${appartement} is al gereserveerd in deze periode!`);
+    if (hasOverlap(apartement, aankomst, vertrek)) {
+      alert(`Appartement ${apartement} is al gereserveerd in deze periode!`);
       return;
     }
     
     // Bereken prijs met kortingen
-    const priceInfo = user ? calculatePriceWithDiscounts(appartement, aankomst, vertrek, user) : calculatePrice(appartement, aankomst, vertrek, null);
+    const priceInfo = user ? calculatePriceWithDiscounts(apartement, aankomst, vertrek, user) : calculatePrice(apartement, aankomst, vertrek, null);
     
     // Reservering toevoegen
     const reservation = {
-      appartement,
+      appartement: apartement,
       naam,
       email,
       aankomst,
@@ -1337,7 +1337,7 @@ document.addEventListener('DOMContentLoaded', () => {
         reservationId: newReservation.id,
         userName: naam,
         amount: -priceInfo.total, // Negatief omdat het een betaling is
-        description: `Reservering Appartement ${appartement}: ${aankomst} - ${vertrek}`,
+        description: `Reservering Appartement ${apartement}: ${aankomst} - ${vertrek}`,
         status: 'pending'
       });
     }
