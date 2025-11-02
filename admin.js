@@ -218,24 +218,37 @@ function loadTransactions() {
   // Show loading state
   container.innerHTML = '<p class="empty-state">Reserveringen laden...</p>';
   
-  // Get reservations - try async first, fallback to sync
-  let reservations = [];
-  if (typeof getReservationsAsync === 'function') {
-    // Try async version
-    getReservationsAsync().then(res => {
-      reservations = res || [];
-      renderReservations(reservations, container);
-    }).catch(err => {
-      console.error('Error loading reservations async:', err);
-      // Fallback to sync
-      reservations = typeof getReservations === 'function' ? getReservations() : [];
-      renderReservations(reservations, container);
-    });
-  } else {
-    // Use sync version
-    reservations = typeof getReservations === 'function' ? getReservations() : [];
-    renderReservations(reservations, container);
-  }
+  // Get reservations - use sync version first (fastest), with async fallback if needed
+  const loadReservations = () => {
+    try {
+      // First try sync version (from localStorage or Firebase sync)
+      const reservations = typeof getReservations === 'function' ? getReservations() : [];
+      if (reservations.length > 0 || localStorage.getItem('santantoni_reservations')) {
+        // We have data (even if empty array), render it immediately
+        renderReservations(reservations, container);
+      } else {
+        // No data in localStorage yet, try async version to fetch from Firebase
+        if (typeof getReservationsAsync === 'function') {
+          getReservationsAsync().then(res => {
+            const fetchedReservations = res || [];
+            renderReservations(fetchedReservations, container);
+          }).catch(err => {
+            console.error('Error loading reservations async:', err);
+            // Show empty state if both fail
+            container.innerHTML = '<p class="empty-state">Nog geen reserveringen</p>';
+          });
+        } else {
+          // No async version, show empty
+          container.innerHTML = '<p class="empty-state">Nog geen reserveringen</p>';
+        }
+      }
+    } catch (error) {
+      console.error('Error in loadTransactions:', error);
+      container.innerHTML = '<p class="empty-state">Fout bij laden reserveringen. Check console.</p>';
+    }
+  };
+  
+  loadReservations();
 }
 
 function renderReservations(reservations, container) {
