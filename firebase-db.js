@@ -75,19 +75,25 @@ async function removeProefReservations() {
   }
 }
 
+// Flag om te voorkomen dat syncReservationsToFirebase wordt aangeroepen na directe updates
+// Deze moeten globaal zijn zodat alle scripts ze kunnen gebruiken
+window.firebaseDirectUpdateInProgress = window.firebaseDirectUpdateInProgress || false;
+window.lastDirectUpdateTime = window.lastDirectUpdateTime || 0;
+
 // Sla reserveringen op (sync versie)
-// WARNING: Deze functie roept syncReservationsToFirebase aan, wat ALLES verwijdert en opnieuw aanmaakt!
-// Gebruik deze NIET na directe Firestore updates - gebruik directe Firestore updates in plaats daarvan
 function saveReservations(reservations, skipFirebaseSync = false) {
   localStorage.setItem('santantoni_reservations', JSON.stringify(reservations));
   
   // Sync naar Firebase als beschikbaar (skip als skipFirebaseSync = true)
-  // Alleen gebruiken voor nieuwe reserveringen of bulk updates, NIET na directe Firestore updates!
-  if (!skipFirebaseSync && isFirebaseReady()) {
-    // Add small delay to avoid conflicts with direct updates
-    setTimeout(() => {
-      syncReservationsToFirebase(reservations).catch(err => console.error('Firebase sync fout:', err));
-    }, 100);
+  // WARNING: syncReservationsToFirebase verwijdert ALLES en maakt opnieuw aan, wat directe updates kan overschrijven!
+  // Gebruik skipFirebaseSync=true als je directe Firestore updates gebruikt
+  // Of als er recent een directe update is gedaan (binnen 5 seconden)
+  const timeSinceLastDirectUpdate = Date.now() - (window.lastDirectUpdateTime || 0);
+  const isUpdateInProgress = window.firebaseDirectUpdateInProgress || false;
+  if (!skipFirebaseSync && !isUpdateInProgress && timeSinceLastDirectUpdate > 5000 && isFirebaseReady()) {
+    syncReservationsToFirebase(reservations).catch(err => console.error('Firebase sync fout:', err));
+  } else if (skipFirebaseSync || isUpdateInProgress || timeSinceLastDirectUpdate <= 5000) {
+    console.log('Skipping syncReservationsToFirebase - direct update in progress or recent');
   }
 }
 
