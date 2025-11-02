@@ -24,8 +24,8 @@
       <a href="index.html">Home</a>
       <a href="admin.html">Beheer</a>
       <a href="kalender.html">Reserveren</a>
-      <a href="fotos.html">Foto's</a>
-      <a href="berichten.html">Berichten</a>
+      <a href="fotos.html" id="navPhotos" class="feature-toggle">Foto's</a>
+      <a href="berichten.html" id="navMessages" class="feature-toggle">Berichten</a>
     </nav>
   </header>
 
@@ -167,6 +167,44 @@
         </div>
         
         <button onclick="savePricingConfig()" class="btn-primary">Opslaan Prijzen</button>
+      </div>
+      
+      <!-- Feature Toggles -->
+      <div class="admin-section">
+        <h4>Functie Instellingen</h4>
+        <p>Schakel functies in of uit die zichtbaar zijn op de website.</p>
+        
+        <div style="margin-top: 1.5em;">
+          <div style="margin-bottom: 1.5em; padding: 1em; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
+            <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
+              <span>
+                <strong>Foto's Functie</strong>
+                <div style="font-size: 0.9em; color: #666; margin-top: 0.3em;">
+                  Toon foto galerij en upload functionaliteit
+                </div>
+              </span>
+              <button onclick="toggleFeature('photos')" id="photosToggleBtn" class="btn-secondary">
+                Feature Inschakelen
+              </button>
+            </label>
+            <div id="photosStatus" style="margin-top: 0.5em; font-weight: bold;"></div>
+          </div>
+          
+          <div style="padding: 1em; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
+            <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer;">
+              <span>
+                <strong>Berichten Functie</strong>
+                <div style="font-size: 0.9em; color: #666; margin-top: 0.3em;">
+                  Toon berichten sectie en berichten plaatsen functionaliteit
+                </div>
+              </span>
+              <button onclick="toggleFeature('messages')" id="messagesToggleBtn" class="btn-secondary">
+                Feature Inschakelen
+              </button>
+            </label>
+            <div id="messagesStatus" style="margin-top: 0.5em; font-weight: bold;"></div>
+          </div>
+        </div>
       </div>
     </div>
   </section>

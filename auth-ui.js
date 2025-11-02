@@ -121,13 +121,56 @@ function requireBookingAccess() {
   return true;
 }
 
+// Check if feature is enabled (global function - can be overridden by admin.js)
+if (typeof window.isFeatureEnabled === 'undefined') {
+  window.isFeatureEnabled = function(feature) {
+    return localStorage.getItem(`feature_${feature}_enabled`) !== 'false'; // Default true
+  };
+}
+
+// Update feature visibility in navigation and on page
+function updateFeatureVisibility() {
+  // Photos feature
+  const photosEnabled = isFeatureEnabled('photos');
+  const navPhotosLinks = document.querySelectorAll('#navPhotos, a[href="fotos.html"]');
+  navPhotosLinks.forEach(link => {
+    if (link.id === 'navPhotos' || link.href && link.href.includes('fotos.html')) {
+      link.style.display = photosEnabled ? '' : 'none';
+    }
+  });
+  
+  // Messages feature
+  const messagesEnabled = isFeatureEnabled('messages');
+  const navMessagesLinks = document.querySelectorAll('#navMessages, a[href="berichten.html"]');
+  navMessagesLinks.forEach(link => {
+    if (link.id === 'navMessages' || link.href && link.href.includes('berichten.html')) {
+      link.style.display = messagesEnabled ? '' : 'none';
+    }
+  });
+  
+  // Homepage sections (only on index.html)
+  const sectionPhotos = document.getElementById('fotos');
+  const sectionMessages = document.getElementById('berichten');
+  
+  if (sectionPhotos) {
+    sectionPhotos.style.display = photosEnabled ? '' : 'none';
+  }
+  if (sectionMessages) {
+    sectionMessages.style.display = messagesEnabled ? '' : 'none';
+  }
+}
+
 // Initialize on page load
 if (typeof window !== 'undefined') {
   // Update navigation on all pages
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', updateNavigation);
+    document.addEventListener('DOMContentLoaded', () => {
+      updateNavigation();
+      updateFeatureVisibility();
+    });
   } else {
     updateNavigation();
+    updateFeatureVisibility();
   }
 }
 

@@ -499,6 +499,64 @@ function initPriorityBypass() {
   }
 }
 
+// Toggle feature (photos or messages)
+function toggleFeature(feature) {
+  // Default to true if not set
+  const storedValue = localStorage.getItem(`feature_${feature}_enabled`);
+  const currentStatus = storedValue === null || storedValue === 'true'; // Default true
+  const newStatus = !currentStatus;
+  
+  localStorage.setItem(`feature_${feature}_enabled`, newStatus.toString());
+  
+  updateFeatureUI(feature);
+  
+  // Update navigation on all pages (call global function if exists)
+  if (typeof updateFeatureVisibility === 'function') {
+    updateFeatureVisibility();
+  }
+  
+  alert(newStatus ? 
+    `✅ ${feature === 'photos' ? 'Foto\'s' : 'Berichten'} functie is INGESCHAKELD.\n\nDe functie is nu zichtbaar in het menu en op de homepage.` :
+    `❌ ${feature === 'photos' ? 'Foto\'s' : 'Berichten'} functie is UITGESCHAKELD.\n\nDe functie is nu verborgen in het menu en op de homepage.`);
+}
+
+// Update feature UI
+function updateFeatureUI(feature) {
+  // Default to true if not set (features are enabled by default)
+  const storedValue = localStorage.getItem(`feature_${feature}_enabled`);
+  const isEnabled = storedValue === null || storedValue === 'true'; // Default true
+  
+  const btn = document.getElementById(`${feature}ToggleBtn`);
+  const status = document.getElementById(`${feature}Status`);
+  const featureName = feature === 'photos' ? 'Foto\'s' : 'Berichten';
+  
+  if (btn) {
+    btn.textContent = isEnabled ? 'Feature Uitschakelen' : 'Feature Inschakelen';
+    btn.style.background = isEnabled ? '#dc3545' : '#28a745';
+  }
+  
+  if (status) {
+    if (isEnabled) {
+      status.textContent = `✅ INGESCHAKELD - ${featureName} functie is actief`;
+      status.style.color = '#28a745';
+    } else {
+      status.textContent = `❌ UITGESCHAKELD - ${featureName} functie is verborgen`;
+      status.style.color = '#dc3545';
+    }
+  }
+}
+
+// Initialize feature toggles on page load
+function initFeatureToggles() {
+  updateFeatureUI('photos');
+  updateFeatureUI('messages');
+}
+
+// Check if feature is enabled (global function for use in other files)
+function isFeatureEnabled(feature) {
+  return localStorage.getItem(`feature_${feature}_enabled`) !== 'false'; // Default true
+}
+
 // Tab switching
 function initAdminTabs() {
   const tabs = document.querySelectorAll('.admin-tab');
@@ -517,6 +575,9 @@ function initAdminTabs() {
   
   // Load priority bypass status
   initPriorityBypass();
+  
+  // Load feature toggles
+  initFeatureToggles();
   
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
