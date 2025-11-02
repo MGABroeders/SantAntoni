@@ -335,11 +335,12 @@ body {
   
   .date-input {
     flex: 1;
-    padding: 0.6em 0.8em;
+    padding: 0.4em 0.5em;
     border: 2px solid #ddd;
     border-radius: 6px;
-    font-size: 0.9em;
+    font-size: 0.8em;
     transition: border-color 0.3s;
+    max-width: 120px;
   }
   
   .date-input:focus {
@@ -347,9 +348,31 @@ body {
     border-color: #0066cc;
   }
   
+  /* Verberg jaartal in datum inputs (alleen voor homepage/agenda, niet reservering pagina) */
+  .date-input::placeholder {
+    color: #999;
+  }
+  
+  /* Hide year selector in date picker for homepage date inputs */
+  .reservation-controls .date-input::-webkit-datetime-edit-year-field {
+    display: none;
+  }
+  
+  .reservation-controls .date-input::-webkit-calendar-picker-indicator {
+    margin-left: 0;
+    cursor: pointer;
+  }
+  
+  /* Op reservering pagina (kalender.html) moet jaar zichtbaar blijven */
+  #reservationForm .date-input::-webkit-datetime-edit-year-field {
+    display: inline;
+  }
+  
   .reservation-controls .btn-reserve {
     flex: 1.5;
     margin-top: 0;
+    padding: 0.5em 1em;
+    font-size: 0.85em;
   }
   
   /* Kalender */
@@ -1225,20 +1248,24 @@ body {
     
     /* Kleinere knoppen voor mobiel */
     .reservation-controls {
-      gap: 4px;
+      gap: 3px;
       margin-top: 0.8em;
     }
     
     .date-input {
-      padding: 0.4em 0.5em;
-      font-size: 0.8em;
+      padding: 0.35em 0.4em;
+      font-size: 0.7em;
       border-width: 1px;
+      max-width: 90px;
+      flex: 0 1 auto;
     }
     
     .btn-reserve {
-      padding: 0.5em 1em;
-      font-size: 0.85em;
+      padding: 0.4em 0.7em;
+      font-size: 0.75em;
       margin-top: 0;
+      flex: 1;
+      min-width: 80px;
     }
     
     .reservation-item {
