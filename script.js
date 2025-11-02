@@ -1085,7 +1085,6 @@ document.addEventListener('DOMContentLoaded', () => {
           
           console.log('Setting breakdown HTML:', html);
           console.log('Full priceInfo:', JSON.stringify(priceInfo, null, 2));
-          console.log('User family:', family, 'Appartement:', appartement, 'AppartementId:', appartement === 'A' ? '35' : '36');
           breakdownContainer.innerHTML = html;
         } else {
           console.error('breakdownContainer not found!');
