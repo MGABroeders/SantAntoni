@@ -457,7 +457,7 @@ body {
     border: 2px solid transparent;
   }
   
-  .calendar-day:hover {
+  .calendar-day:hover:not(.selected-start):not(.selected-end):not(.selected-range) {
     background: #f5f5f5;
   }
   
@@ -467,24 +467,34 @@ body {
   }
   
   .calendar-day.today {
-    background: #d4e8f7;
-    border-color: #0066cc;
     font-weight: bold;
   }
   
-   .calendar-day.reserved {
-     background: #d3d3d3;
-     border-color: #999;
-   }
-   
-   .calendar-day.reserved-A {
-     background: #d3d3d3;
-     border-color: #999;
-   }
-   
+   .calendar-day.reserved,
+   .calendar-day.reserved-A,
    .calendar-day.reserved-B {
-     background: #d3d3d3;
+     background: repeating-linear-gradient(
+       45deg,
+       #f5f5f5,
+       #f5f5f5 5px,
+       #d3d3d3 5px,
+       #d3d3d3 10px
+     );
      border-color: #999;
+   }
+   
+   /* Combinaties met today */
+   .calendar-day.today.reserved,
+   .calendar-day.today.reserved-A,
+   .calendar-day.today.reserved-B {
+     background: repeating-linear-gradient(
+       45deg,
+       #f5f5f5,
+       #f5f5f5 5px,
+       #d3d3d3 5px,
+       #d3d3d3 10px
+     ) !important;
+     font-weight: bold;
    }
    
    .calendar-day.has-reservation {
@@ -516,15 +526,46 @@ body {
    }
    
    .calendar-day.selected-range {
-     background: #E3F2FD !important;
+     background: #E0E0E0 !important;
    }
    
    .calendar-day.clickable {
      cursor: pointer;
    }
    
-  .calendar-day.clickable:hover {
+  .calendar-day.clickable:hover:not(.selected-start):not(.selected-end):not(.selected-range):not(.hover-day) {
     background: #f5f5f5 !important;
+  }
+  
+  /* Hover styling */
+  .calendar-day.hover-day {
+    background: #2196F3 !important;
+  }
+  
+  .calendar-day.hover-day .calendar-day-number {
+    color: white;
+  }
+  
+  .calendar-day.hover-start {
+    border-radius: 6px !important;
+  }
+  
+  .calendar-day.hover-end {
+    border-radius: 0 6px 6px 0 !important;
+  }
+  
+  .calendar-day.hover-range:not(.selected-start):not(.selected-end) {
+    background: #E0E0E0 !important;
+  }
+  
+  .calendar-day.hover-range-blocked:not(.selected-start):not(.selected-end) {
+    background: repeating-linear-gradient(
+      45deg,
+      #ffebee,
+      #ffebee 5px,
+      #ffcdd2 5px,
+      #ffcdd2 10px
+    ) !important;
   }
   
   /* Disabled booking overlay */
