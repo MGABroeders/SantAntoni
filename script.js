@@ -70,6 +70,15 @@ function calculatePrice(apartement, aankomst, vertrek, user = null) {
   
   const appPricing = PRIJZEN[appartementId][family];
   
+  console.log('Price calculation:', {
+    appartement,
+    appartementId,
+    family,
+    appPricing,
+    start: aankomst,
+    end: vertrek
+  });
+  
   let total = 0;
   const breakdown = [];
   const currentDate = new Date(start);
@@ -78,6 +87,8 @@ function calculatePrice(apartement, aankomst, vertrek, user = null) {
     const maand = currentDate.getMonth();
     const seizoen = getSeizoen(maand);
     const prijsPerNacht = appPricing[seizoen];
+    
+    console.log(`Date: ${currentDate.toLocaleDateString()}, Month: ${maand}, Seizoen: ${seizoen}, Prijs: €${prijsPerNacht}`);
     
     // Speciale logica voor App 36 zomer (€675/week alleen voor Familie A/C)
     if (appartementId === '36' && seizoen === 'zomer' && (family === 'A' || family === 'C')) {
@@ -154,7 +165,7 @@ function calculatePrice(apartement, aankomst, vertrek, user = null) {
 }
 
 function getSeizoenNaam(seizoen) {
-  const namen = { laag: 'Laagseizoen', zomer: 'Zomer' };
+  const namen = { laag: 'Laagseizoen (buiten juni/juli)', zomer: 'Zomer (juni/juli)' };
   return namen[seizoen] || seizoen;
 }
 
@@ -936,28 +947,45 @@ document.addEventListener('DOMContentLoaded', () => {
         // Build detailed breakdown list
         const breakdownContainer = document.getElementById('priceBreakdown');
         if (breakdownContainer && priceInfo.breakdownItems) {
-          let html = priceInfo.breakdownItems.map(item => 
-            `<div>${item.count}x ${item.naam} = €${(item.count * item.prijs).toFixed(2)}</div>`
-          ).join('');
+          // Show user info for debugging
+          const family = user && user.family ? user.family : 'C (geen familie)';
+          const familyName = family === 'A' ? 'Familie A' : (family === 'B' ? 'Familie B' : 'Familie C (geen familie)');
+          
+          let html = `<div style="margin-bottom: 1em; padding: 0.5em; background: #f5f5f5; border-radius: 4px; font-size: 0.9em;">
+            <strong>Appartement:</strong> ${appartement === 'A' ? '35' : '36'}<br>
+            <strong>Familie:</strong> ${familyName}<br>
+            <strong>Periode:</strong> ${new Date(aankomst).toLocaleDateString('nl-NL')} - ${new Date(vertrek).toLocaleDateString('nl-NL')}
+          </div>`;
+          
+          html += priceInfo.breakdownItems.map(item => {
+            if (item.isWeekly) {
+              return `<div><strong>${item.count} week(en)</strong> ${item.naam} @ €${item.prijs.toFixed(2)}/week = <strong>€${(item.count * item.prijs).toFixed(2)}</strong></div>`;
+            } else {
+              return `<div><strong>${item.count} nacht(en)</strong> ${item.naam} @ €${item.prijs.toFixed(2)}/nacht = <strong>€${(item.count * item.prijs).toFixed(2)}</strong></div>`;
+            }
+          }).join('');
           
           // Add discounts if any
           if (priceInfo.discounts && priceInfo.discounts.length > 0) {
-            html += '<div style="margin-top: 0.5em; color: #4CAF50;"><strong>Kortingen:</strong></div>';
+            html += '<div style="margin-top: 1em; padding-top: 1em; border-top: 1px solid #ddd;"><div style="color: #4CAF50;"><strong>Kortingen:</strong></div>';
             priceInfo.discounts.forEach(disc => {
-              html += `<div style="color: #4CAF50;">-${disc.percentage}% ${disc.type} = -€${disc.amount.toFixed(2)}</div>`;
+              html += `<div style="color: #4CAF50;">- ${disc.percentage}% ${disc.type} = -€${disc.amount.toFixed(2)}</div>`;
             });
+            html += '</div>';
           }
           
           // Add totals
-          if (priceInfo.baseTotal !== undefined) {
-            html += `<div><strong>Subtotaal: €${priceInfo.baseTotal.toFixed(2)}</strong></div>`;
+          if (priceInfo.baseTotal !== undefined && priceInfo.baseTotal !== priceInfo.total) {
+            html += `<div style="margin-top: 1em; padding-top: 1em; border-top: 1px solid #ddd;"><strong>Subtotaal: €${priceInfo.baseTotal.toFixed(2)}</strong></div>`;
           }
-          html += `<div><strong>Totaal = €${priceInfo.total.toFixed(2)}</strong></div>`;
+          html += `<div style="margin-top: 0.5em; font-size: 1.2em; font-weight: bold; color: #1565c0;"><strong>Totaal: €${priceInfo.total.toFixed(2)}</strong></div>`;
           
           console.log('Setting breakdown HTML:', html);
+          console.log('User family:', family, 'Appartement:', appartement, 'AppartementId:', appartement === 'A' ? '35' : '36');
           breakdownContainer.innerHTML = html;
         } else {
           console.log('No breakdown items or container not found');
+          console.log('breakdownContainer:', breakdownContainer, 'priceInfo.breakdownItems:', priceInfo.breakdownItems);
         }
         
         if (priceDisplay) {
