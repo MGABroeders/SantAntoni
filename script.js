@@ -347,21 +347,36 @@ function isDateReserved(date, reservations) {
 
 // Check of een datum bezet is voor een specifiek appartement
 function isDateReservedForApartment(date, apartment, reservations) {
-  const dateStr = formatDate(date);
+  // Normalize dates to midnight (ignore time component) for accurate day comparison
   const checkDate = new Date(date);
+  checkDate.setHours(0, 0, 0, 0);
+  
   return reservations.some(res => {
     if (res.appartement !== apartment) return false;
     const start = new Date(res.aankomst);
+    start.setHours(0, 0, 0, 0);
     const end = new Date(res.vertrek);
+    end.setHours(0, 0, 0, 0);
+    
+    // Begindatum + alle dagen ertussen, maar einddatum is vertrekdag (niet gereserveerd voor overnachting)
+    // checkDate >= start: begindatum wordt meegenomen
+    // checkDate < end: einddatum wordt NIET meegenomen (dat is vertrekdag)
     return checkDate >= start && checkDate < end;
   });
 }
 
 function getReservationsForDate(date, reservations) {
+  // Normalize dates to midnight (ignore time component) for accurate day comparison
   const checkDate = new Date(date);
+  checkDate.setHours(0, 0, 0, 0);
+  
   return reservations.filter(res => {
     const start = new Date(res.aankomst);
+    start.setHours(0, 0, 0, 0);
     const end = new Date(res.vertrek);
+    end.setHours(0, 0, 0, 0);
+    
+    // Begindatum + alle dagen ertussen, maar einddatum is vertrekdag (niet gereserveerd voor overnachting)
     return checkDate >= start && checkDate < end;
   });
 }
