@@ -372,12 +372,8 @@ async function markReservationAsPaid(reservationId) {
   reservation.status = 'betaald';
   
   // Set flag to prevent syncReservationsToFirebase from overwriting
-  if (typeof firebaseDB !== 'undefined') {
-    if (typeof firebaseDirectUpdateInProgress !== 'undefined') {
-      firebaseDirectUpdateInProgress = true;
-      lastDirectUpdateTime = Date.now();
-    }
-  }
+  window.firebaseDirectUpdateInProgress = true;
+  window.lastDirectUpdateTime = Date.now();
   
   // Update Firebase FIRST (direct update, no batch overwrite)
   if (typeof firebaseDB !== 'undefined' && firebaseDB && reservation.id) {
@@ -395,9 +391,7 @@ async function markReservationAsPaid(reservationId) {
       console.error('Fout bij updaten reservering status in Firebase:', error);
       alert('Fout bij opslaan in Firebase. Check console voor details.');
       // Reset flag on error
-      if (typeof firebaseDirectUpdateInProgress !== 'undefined') {
-        firebaseDirectUpdateInProgress = false;
-      }
+      window.firebaseDirectUpdateInProgress = false;
       return; // Stop if Firebase update fails
     }
   }
