@@ -99,32 +99,60 @@
   <script>
     // Initialize Firebase and load photos
     document.addEventListener('DOMContentLoaded', async () => {
-      // Initialize Firebase
-      if (typeof initFirebase === 'function') {
-        initFirebase();
+      // Wait for Firebase SDK to load
+      let maxWait = 50; // 5 seconds max
+      while (typeof firebase === 'undefined' && maxWait > 0) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        maxWait--;
       }
       
-      // Wait a bit for Firebase to initialize
-      setTimeout(() => {
-        // Update upload form visibility
-        updatePhotoUploadForm();
-        
-        // Load photos
-        loadPhotos();
-        
-        // Subscribe to real-time updates
-        if (typeof subscribeToPhotos === 'function') {
-          subscribeToPhotos((photos) => {
-            displayPhotos(photos);
-          });
+      if (typeof firebase === 'undefined') {
+        console.error('Firebase SDK niet geladen na wachten');
+        alert('Fout: Firebase SDK niet geladen. Herlaad de pagina.');
+        return;
+      }
+      
+      // Initialize Firebase
+      if (typeof initFirebase === 'function') {
+        const success = initFirebase();
+        if (!success) {
+          console.error('Firebase initialisatie mislukt');
+          return;
         }
-        
-        // Setup upload form
-        const uploadForm = document.getElementById('photoUploadForm');
-        if (uploadForm) {
-          uploadForm.addEventListener('submit', handlePhotoUpload);
+      } else {
+        console.error('initFirebase functie niet gevonden');
+        return;
+      }
+      
+      // Wait a bit for Firebase to fully initialize
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Verify firebaseStorage is available
+      if (typeof firebaseStorage === 'undefined') {
+        console.warn('firebaseStorage niet geïnitialiseerd, probeer opnieuw...');
+        if (typeof firebase !== 'undefined' && firebase.storage) {
+          firebaseStorage = firebase.storage();
         }
-      }, 500);
+      }
+      
+      // Update upload form visibility
+      updatePhotoUploadForm();
+      
+      // Load photos
+      loadPhotos();
+      
+      // Subscribe to real-time updates
+      if (typeof subscribeToPhotos === 'function') {
+        subscribeToPhotos((photos) => {
+          displayPhotos(photos);
+        });
+      }
+      
+      // Setup upload form
+      const uploadForm = document.getElementById('photoUploadForm');
+      if (uploadForm) {
+        uploadForm.addEventListener('submit', handlePhotoUpload);
+      }
     });
     
     // Update photo upload form visibility

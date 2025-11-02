@@ -2,8 +2,31 @@
 
 // Upload foto naar Firebase Storage
 async function uploadPhoto(file, category, description) {
+  // Ensure Firebase is initialized
+  if (typeof firebase === 'undefined') {
+    alert('Firebase SDK niet geladen. Herlaad de pagina.');
+    return null;
+  }
+  
   if (!firebaseStorage) {
-    console.error('Firebase Storage niet geïnitialiseerd');
+    // Try to initialize if not done yet
+    if (typeof initFirebase === 'function') {
+      initFirebase();
+      // Wait a moment for initialization
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    if (!firebaseStorage && typeof firebase !== 'undefined') {
+      try {
+        firebaseStorage = firebase.storage();
+      } catch (e) {
+        console.error('Fout bij initialiseren Firebase Storage:', e);
+      }
+    }
+  }
+  
+  if (!firebaseStorage) {
+    alert('Firebase Storage niet geïnitialiseerd. Controleer of Firebase Storage SDK geladen is.');
     return null;
   }
   
@@ -135,8 +158,31 @@ function subscribeToPhotos(callback) {
 
 // Verwijder foto
 async function deletePhoto(photoId, photoUrl) {
+  // Ensure Firebase is initialized
+  if (typeof firebase === 'undefined') {
+    alert('Firebase SDK niet geladen. Herlaad de pagina.');
+    return false;
+  }
+  
+  if (!firebaseStorage) {
+    // Try to initialize if not done yet
+    if (typeof initFirebase === 'function') {
+      initFirebase();
+      // Wait a moment for initialization
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    if (!firebaseStorage && typeof firebase !== 'undefined') {
+      try {
+        firebaseStorage = firebase.storage();
+      } catch (e) {
+        console.error('Fout bij initialiseren Firebase Storage:', e);
+      }
+    }
+  }
+  
   if (!firebaseDB || !firebaseStorage) {
-    console.error('Firebase niet geïnitialiseerd');
+    alert('Firebase niet geïnitialiseerd. Controleer of Firebase SDK geladen is.');
     return false;
   }
   
@@ -168,7 +214,16 @@ async function deletePhoto(photoId, photoUrl) {
     
     // Delete from Storage
     try {
-      const storageRef = firebaseStorage.refFromURL ? firebaseStorage.refFromURL(photoUrl) : firebaseStorage.ref(photoUrl);
+      // Extract storage path from URL or use refFromURL if available
+      let storageRef;
+      if (firebaseStorage.refFromURL) {
+        storageRef = firebaseStorage.refFromURL(photoUrl);
+      } else {
+        // Try to extract path from URL
+        const urlPath = photoUrl.split('/o/')[1]?.split('?')[0];
+        const decodedPath = urlPath ? decodeURIComponent(urlPath) : photoUrl;
+        storageRef = firebaseStorage.ref(decodedPath);
+      }
       await storageRef.delete();
     } catch (storageError) {
       console.warn('Fout bij verwijderen uit Storage (mogelijk al verwijderd):', storageError);
