@@ -45,6 +45,8 @@ function initTestUsers() {
       password: '123',
       role: 'admin',
       approved: true,
+      family: null,
+      rank: null,
       settings: {
         canBook: true,
         maxReservationsPerYear: 10,
@@ -54,7 +56,7 @@ function initTestUsers() {
     });
   }
   
-  // Test1 account
+  // Test1 account - Familie B
   if (!users.find(u => u.id === 'test1')) {
     users.push({
       id: 'test1',
@@ -63,6 +65,8 @@ function initTestUsers() {
       password: '123',
       role: 'user',
       approved: true,
+      family: 'B',
+      rank: 'ouder',
       settings: {
         canBook: true,
         maxReservationsPerYear: 5,
@@ -72,7 +76,7 @@ function initTestUsers() {
     });
   }
   
-  // Test2 account
+  // Test2 account - Familie A
   if (!users.find(u => u.id === 'test2')) {
     users.push({
       id: 'test2',
@@ -81,6 +85,8 @@ function initTestUsers() {
       password: '123',
       role: 'user',
       approved: true,
+      family: 'A',
+      rank: 'ouder',
       settings: {
         canBook: true,
         maxReservationsPerYear: 5,
@@ -89,6 +95,18 @@ function initTestUsers() {
       created: new Date().toISOString()
     });
   }
+  
+  // Update bestaande test accounts om family en rank te hebben
+  users.forEach(u => {
+    if (u.id === 'test1' && !u.family) {
+      u.family = 'B';
+      u.rank = 'ouder';
+    }
+    if (u.id === 'test2' && !u.family) {
+      u.family = 'A';
+      u.rank = 'ouder';
+    }
+  });
   
   if (users.length > 0) {
     saveUsers(users);

@@ -48,11 +48,11 @@ function loadUsers() {
   // Display approved in family columns
   const familyAContainer = document.getElementById('familyAUsers');
   const familyBContainer = document.getElementById('familyBUsers');
-  const noFamilyContainer = document.getElementById('noFamilyUsers');
+  const familyCContainer = document.getElementById('familyCUsers');
   
   const familyA = approved.filter(u => u.family === 'A');
   const familyB = approved.filter(u => u.family === 'B');
-  const noFamily = approved.filter(u => !u.family || u.family === '');
+  const familyC = approved.filter(u => u.family === 'C' || !u.family || u.family === '');
   
   if (familyAContainer) {
     familyAContainer.innerHTML = familyA.map(user => createDraggableUserItem(user)).join('');
@@ -62,8 +62,8 @@ function loadUsers() {
     familyBContainer.innerHTML = familyB.map(user => createDraggableUserItem(user)).join('');
   }
   
-  if (noFamilyContainer) {
-    noFamilyContainer.innerHTML = noFamily.map(user => createDraggableUserItem(user)).join('');
+  if (familyCContainer) {
+    familyCContainer.innerHTML = familyC.map(user => createDraggableUserItem(user)).join('');
   }
 }
 
@@ -290,3 +290,70 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// Load summer distribution overview
+function loadSummerDistribution() {
+  if (!checkAdminAccess()) return;
+  
+  const container = document.getElementById('summerDistribution');
+  if (!container) return;
+  
+  const currentYear = new Date().getFullYear();
+  const nextYear = currentYear + 1;
+  
+  let html = `
+    <div style="background: #e3f2fd; padding: 1.5em; border-radius: 8px; margin-bottom: 1.5em;">
+      <h5 style="margin-top: 0; color: #1565c0;">⚠️ Huidige Regels</h5>
+      <div style="font-size: 0.9em; line-height: 2;">
+        <div><strong>Prioriteitsperiode:</strong> Januari t/m Maart (alleen prioriteitsfamilies mogen zomer reserveren)</div>
+        <div><strong>Na prioriteitsperiode:</strong> Vanaf april kan iedereen reserveren</div>
+        <div><strong>Voor volgend jaar:</strong> Pas vanaf 1 januari mag je zomer reserveren</div>
+        <div><strong>Zomermaanden:</strong> Juni, Juli, Augustus, September</div>
+      </div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2em; margin-top: 1em;">
+      <div class="admin-card" style="background: white; padding: 1.5em; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <h5 style="margin-top: 0; color: #1565c0;">${currentYear}</h5>
+        <h6>Appartement 35</h6>
+        <div style="font-size: 0.9em; line-height: 1.8;">
+          <div><strong>Juni/Juli:</strong> ${currentYear % 2 === 0 ? 'Familie A' : 'Familie B'}</div>
+          <div><strong>Augustus/September:</strong> ${currentYear % 2 === 0 ? 'Familie B' : 'Familie A'}</div>
+        </div>
+        <h6 style="margin-top: 1em;">Appartement 36</h6>
+        <div style="font-size: 0.9em; line-height: 1.8;">
+          <div><strong>Alle zomermaanden:</strong> Familie B</div>
+        </div>
+      </div>
+      
+      <div class="admin-card" style="background: white; padding: 1.5em; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <h5 style="margin-top: 0; color: #1565c0;">${nextYear}</h5>
+        <h6>Appartement 35</h6>
+        <div style="font-size: 0.9em; line-height: 1.8;">
+          <div><strong>Juni/Juli:</strong> ${nextYear % 2 === 0 ? 'Familie A' : 'Familie B'}</div>
+          <div><strong>Augustus/September:</strong> ${nextYear % 2 === 0 ? 'Familie B' : 'Familie A'}</div>
+        </div>
+        <h6 style="margin-top: 1em;">Appartement 36</h6>
+        <div style="font-size: 0.9em; line-height: 1.8;">
+          <div><strong>Alle zomermaanden:</strong> Familie B</div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  container.innerHTML = html;
+}
+
+// Save priority period
+function savePriorityPeriod() {
+  const startMonth = document.getElementById('priorityStartMonth').value;
+  const endMonth = document.getElementById('priorityEndMonth').value;
+  
+  // TODO: Save to localStorage/config
+  alert(`Prioriteitsperiode opgeslagen: Maanden ${startMonth} t/m ${endMonth}`);
+}
+
+// Save pricing configuration
+function savePricingConfig() {
+  // TODO: Get all pricing values and save
+  alert('Prijzen configuratie opgeslagen');
+}

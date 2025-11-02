@@ -65,9 +65,9 @@
             <div id="familyBUsers" class="family-users-list"></div>
           </div>
           
-          <div class="family-column" data-family="" ondrop="dropUser(event)" ondragover="allowDrop(event)">
-            <h5>Geen Familie</h5>
-            <div id="noFamilyUsers" class="family-users-list"></div>
+          <div class="family-column" data-family="C" ondrop="dropUser(event)" ondragover="allowDrop(event)">
+            <h5>Familie C (Geen familie)</h5>
+            <div id="familyCUsers" class="family-users-list"></div>
           </div>
         </div>
       </div>
@@ -82,8 +82,83 @@
     <!-- Settings Tab -->
     <div id="settingsTab" class="admin-tab-content">
       <h3>Systeem Instellingen</h3>
+      
+      <!-- Prioriteits periode -->
       <div class="admin-section">
-        <p>Systeem configuratie opties komen hier</p>
+        <h4>Prioriteits Periode</h4>
+        <p>Gedurende deze periode (elk jaar) mogen alleen families met prioriteit reserveren. Daarna kan iedereen boeken.</p>
+        <div class="form-group">
+          <label for="priorityStartMonth">Start maand:</label>
+          <input type="number" id="priorityStartMonth" min="1" max="12" value="1" class="form-control">
+          <span class="help-text">Januari</span>
+        </div>
+        <div class="form-group">
+          <label for="priorityEndMonth">Eind maand:</label>
+          <input type="number" id="priorityEndMonth" min="1" max="12" value="3" class="form-control">
+          <span class="help-text">Maart</span>
+        </div>
+        <button onclick="savePriorityPeriod()" class="btn-primary">Opslaan</button>
+      </div>
+      
+      <!-- Zomer maanden verdeling -->
+      <div class="admin-section">
+        <h4>Zomer maanden verdeling per jaar</h4>
+        <div id="summerDistribution"></div>
+        <button onclick="loadSummerDistribution()" class="btn-secondary">Genereer Overzicht</button>
+      </div>
+      
+      <!-- Prijzen configuratie -->
+      <div class="admin-section">
+        <h4>Prijzen Configuratie</h4>
+        <p>Per nacht prijzen (zomer = juli + augustus, laag = rest)</p>
+        
+        <h5>Appartement 35</h5>
+        <p>Familie = A of B. Geen familie = C</p>
+        <div class="form-group">
+          <label>Familie (A of B), hoogseizoen (juli/augustus):</label>
+          <input type="number" id="price35_family_summer" value="58" class="form-control">
+          <span class="help-text">€ per nacht (€406 per week)</span>
+        </div>
+        <div class="form-group">
+          <label>Familie (A of B), laagseizoen:</label>
+          <input type="number" id="price35_family_low" value="43" class="form-control">
+          <span class="help-text">€ per nacht (€301 per week)</span>
+        </div>
+        <div class="form-group">
+          <label>Geen familie (Familie C), hoogseizoen:</label>
+          <input type="number" id="price35_noFamily_summer" value="143" class="form-control">
+          <span class="help-text">€ per nacht (€1001 per week)</span>
+        </div>
+        <div class="form-group">
+          <label>Geen familie (Familie C), laagseizoen:</label>
+          <input type="number" id="price35_noFamily_low" value="86" class="form-control">
+          <span class="help-text">€ per nacht (€602 per week)</span>
+        </div>
+        
+        <h5>Appartement 36</h5>
+        <p>Familie = B. Geen familie = A of C</p>
+        <div class="form-group">
+          <label>Familie B, hoogseizoen:</label>
+          <input type="number" id="price36_familyB_summer" value="48" class="form-control">
+          <span class="help-text">€ per nacht (€336 per week)</span>
+        </div>
+        <div class="form-group">
+          <label>Familie B, laagseizoen:</label>
+          <input type="number" id="price36_familyB_low" value="34" class="form-control">
+          <span class="help-text">€ per nacht (€238 per week)</span>
+        </div>
+        <div class="form-group">
+          <label>Geen familie B (A of C), hoogseizoen:</label>
+          <input type="number" id="price36_noFamilyB_summer" value="675" class="form-control">
+          <span class="help-text">€ per week (alleen hele weken)</span>
+        </div>
+        <div class="form-group">
+          <label>Geen familie B (A of C), laagseizoen:</label>
+          <input type="number" id="price36_noFamilyB_low" value="67" class="form-control">
+          <span class="help-text">€ per nacht (€469 per week)</span>
+        </div>
+        
+        <button onclick="savePricingConfig()" class="btn-primary">Opslaan Prijzen</button>
       </div>
     </div>
   </section>
