@@ -982,19 +982,22 @@ document.addEventListener('DOMContentLoaded', () => {
         // Build detailed breakdown list
         const breakdownContainer = document.getElementById('priceBreakdown');
         
-        // Validate priceInfo
-        if (!priceInfo || (priceInfo.total === 0 && (!priceInfo.breakdownItems || priceInfo.breakdownItems.length === 0))) {
-          console.error('Invalid priceInfo:', priceInfo);
+        // Validate priceInfo - toon altijd, ook als 0
+        if (!priceInfo) {
+          console.error('priceInfo is null/undefined:', priceInfo);
           if (breakdownContainer) {
-            const family = user && user.family ? user.family : 'C';
             breakdownContainer.innerHTML = `<div style="color: #d32f2f; padding: 1em; background: #ffebee; border-radius: 4px;">
               <strong>Fout bij prijsberekening</strong><br>
-              Appartement: ${appartement}<br>
-              Familie: ${family}<br>
-              Check console voor details.
+              Prijsberekening kon niet worden uitgevoerd. Check console voor details.
             </div>`;
+            if (priceDisplay) priceDisplay.style.display = 'block';
           }
           return;
+        }
+        
+        // Als total 0 is maar breakdownItems bestaat, toon het alsnog (admin krijgt 100% korting)
+        if (priceInfo.total === 0 && (!priceInfo.breakdownItems || priceInfo.breakdownItems.length === 0)) {
+          console.warn('Price calculation returned 0 with no breakdown items:', priceInfo);
         }
         
         if (breakdownContainer) {
@@ -1039,8 +1042,11 @@ document.addEventListener('DOMContentLoaded', () => {
             html += `<div style="margin-top: 1em; padding-top: 1em; border-top: 1px solid #ddd;"><strong>Subtotaal: €${priceInfo.baseTotal.toFixed(2)}</strong></div>`;
           }
           
-          const totalDisplay = priceInfo.total && priceInfo.total > 0 ? priceInfo.total.toFixed(2) : '0.00 (CHECK CONSOLE!)';
-          html += `<div style="margin-top: 0.5em; font-size: 1.2em; font-weight: bold; color: ${priceInfo.total > 0 ? '#1565c0' : '#d32f2f'};"><strong>Totaal: €${totalDisplay}</strong></div>`;
+          // Toon totaal - admin krijgt 0 (100% korting), anders toon prijs
+          const totalDisplay = priceInfo.total !== undefined ? priceInfo.total.toFixed(2) : '0.00';
+          const totalColor = priceInfo.total > 0 ? '#1565c0' : (priceInfo.total === 0 && user && user.role === 'admin' ? '#4CAF50' : '#d32f2f');
+          const totalMessage = priceInfo.total === 0 && user && user.role === 'admin' ? ' (100% korting voor admin)' : '';
+          html += `<div style="margin-top: 0.5em; font-size: 1.2em; font-weight: bold; color: ${totalColor};"><strong>Totaal: €${totalDisplay}${totalMessage}</strong></div>`;
           
           console.log('Setting breakdown HTML:', html);
           console.log('Full priceInfo:', JSON.stringify(priceInfo, null, 2));
@@ -1079,6 +1085,11 @@ document.addEventListener('DOMContentLoaded', () => {
         updatePrice();
         updateReservationForm(); // Update user info display
       });
+      
+      // Ook bij input events (voor snellere feedback)
+      aankomstInput.addEventListener('input', () => {
+        updatePrice();
+      });
     }
     
     const vertrekInput = document.getElementById('vertrek');
@@ -1086,6 +1097,11 @@ document.addEventListener('DOMContentLoaded', () => {
       vertrekInput.addEventListener('change', () => {
         updatePrice();
         updateReservationForm(); // Update user info display
+      });
+      
+      // Ook bij input events (voor snellere feedback)
+      vertrekInput.addEventListener('input', () => {
+        updatePrice();
       });
     }
     
@@ -1131,7 +1147,15 @@ document.addEventListener('DOMContentLoaded', () => {
     updateReservationForm();
     
     // Re-check after auth loads
-    setTimeout(updateReservationForm, 100);
+    setTimeout(() => {
+      updateReservationForm();
+      updatePrice(); // Update prijs na auth load
+    }, 100);
+    
+    // Ook update prijs na een korte delay om zeker te zijn dat alles geladen is
+    setTimeout(() => {
+      updatePrice();
+    }, 500);
   }
   
   // Formulier submit - alleen op kalender pagina
@@ -1152,6 +1176,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const vertrek = document.getElementById('vertrek').value;
     const personen = parseInt(document.getElementById('personen').value);
     const opmerking = document.getElementById('opmerking').value;
+    
+    // Check betalingsvoorwaarden akkoord
+    const paymentAgreement = document.getElementById('paymentAgreement');
+    if (!paymentAgreement || !paymentAgreement.checked) {
+      alert('Je moet akkoord gaan met de betalingsvoorwaarden om je reservering te kunnen plaatsen.');
+      paymentAgreement?.focus();
+      return;
+    }
     
     // Validatie
     if (new Date(aankomst) >= new Date(vertrek)) {

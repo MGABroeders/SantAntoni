@@ -84,7 +84,30 @@
             <div id="priceBreakdown"></div>
           </div>
           
-          <button type="submit" class="btn-primary">Reservering aanvragen</button>
+          <!-- Betalingsmelding -->
+          <div class="payment-notice" style="margin-top: 1.5em; padding: 1em; background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px;">
+            <h4 style="margin-top: 0; color: #856404;">⚠️ Belangrijk: Betalingstermijn</h4>
+            <p style="margin: 0.5em 0; color: #856404;">
+              Om je reservering te bevestigen, moet je <strong>binnen 7 dagen na aanvraag</strong> betalen naar:
+            </p>
+            <div style="margin: 0.8em 0; padding: 0.8em; background: white; border-radius: 4px; font-family: monospace; font-size: 1.1em; text-align: center; color: #333;">
+              <strong>Rekeningnummer: [TE VULLEN]</strong><br>
+              <small>t.n.v. Familie Sant Antoni</small>
+            </div>
+            <p style="margin: 0.5em 0; color: #856404;">
+              Als je niet binnen 7 dagen betaalt, wordt je reservering automatisch geannuleerd.
+            </p>
+            <div class="form-group" style="margin-top: 1em;">
+              <label style="display: flex; align-items: center; cursor: pointer;">
+                <input type="checkbox" id="paymentAgreement" required style="margin-right: 0.5em; width: 20px; height: 20px;">
+                <span style="color: #856404; font-weight: bold;">
+                  Ik ga akkoord met de betalingsvoorwaarden en begrijp dat mijn reservering wordt geannuleerd als ik niet binnen 7 dagen betaal.
+                </span>
+              </label>
+            </div>
+          </div>
+          
+          <button type="submit" class="btn-primary" style="margin-top: 1.5em;">Reservering aanvragen</button>
         </form>
       </div>
     </div>
