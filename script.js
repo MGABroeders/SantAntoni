@@ -59,13 +59,16 @@ function calculatePrice(apartement, aankomst, vertrek, user = null) {
   // Familie bepalen: gebruik user.family, anders default naar 'C' (geen familie)
   const family = user && user.family ? user.family : 'C';
   
+  // Converteer A->35, B->36 voor oude code compatibiliteit
+  const appartementId = appartement === 'A' ? '35' : (appartement === 'B' ? '36' : appartement);
+  
   // Check of appartementnummer correct is
-  if (!PRIJZEN[apartement] || !PRIJZEN[apartement][family]) {
-    console.error(`Geen prijs configuratie voor App ${apartement}, Familie ${family}`);
+  if (!PRIJZEN[appartementId] || !PRIJZEN[appartementId][family]) {
+    console.error(`Geen prijs configuratie voor App ${appartementId}, Familie ${family}`);
     return { total: 0, breakdown: '', breakdownItems: [] };
   }
   
-  const appPricing = PRIJZEN[apartement][family];
+  const appPricing = PRIJZEN[appartementId][family];
   
   let total = 0;
   const breakdown = [];
@@ -77,7 +80,7 @@ function calculatePrice(apartement, aankomst, vertrek, user = null) {
     const prijsPerNacht = appPricing[seizoen];
     
     // Speciale logica voor App 36 zomer (€675/week alleen voor Familie A/C)
-    if (apartement === '36' && seizoen === 'zomer' && (family === 'A' || family === 'C')) {
+    if (appartementId === '36' && seizoen === 'zomer' && (family === 'A' || family === 'C')) {
       // €675 per week, niet per nacht
       breakdown.push({
         date: new Date(currentDate),
