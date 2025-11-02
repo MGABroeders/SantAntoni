@@ -205,69 +205,135 @@ function saveUserSettings() {
   alert('Instellingen opgeslagen');
 }
 
-// Load transactions
+// Load transactions and reservations combined
 function loadTransactions() {
   if (!checkAdminAccess()) return;
   
-  const transactions = getTransactions();
   const container = document.getElementById('transactionsList');
   if (!container) return;
   
-  if (transactions.length === 0) {
-    container.innerHTML = '<p class="empty-state">Geen transacties</p>';
+  // Get reservations
+  const reservations = typeof getReservations === 'function' ? getReservations() : [];
+  
+  // Get users to find user info for reservations
+  const users = getUsers();
+  
+  if (reservations.length === 0) {
+    container.innerHTML = '<p class="empty-state">Nog geen reserveringen</p>';
     return;
   }
   
-  container.innerHTML = transactions.map(trans => {
-    const date = new Date(trans.date).toLocaleDateString('nl-NL');
+  // Sort by aankomst date
+  const sortedReservations = reservations.sort((a, b) => new Date(a.aankomst) - new Date(b.aankomst));
+  
+  container.innerHTML = sortedReservations.map(res => {
+    const aankomst = new Date(res.aankomst).toLocaleDateString('nl-NL');
+    const vertrek = new Date(res.vertrek).toLocaleDateString('nl-NL');
+    const created = res.created ? new Date(res.created).toLocaleDateString('nl-NL') : 'Onbekend';
+    
+    // Find user for this reservation
+    const user = users.find(u => u.email === res.email || u.name === res.naam);
+    
+    // Calculate price if not already set
+    let price = res.prijs;
+    if (!price || price === 0) {
+      // Calculate price based on user family and dates
+      const family = user ? (user.family || 'C') : 'C';
+      const appartement = res.appartement === '35' || res.appartement === 'A' ? 'A' : (res.appartement === '36' || res.appartement === 'B' ? 'B' : res.appartement);
+      
+      if (typeof calculatePriceWithDiscounts === 'function' && user) {
+        const priceInfo = calculatePriceWithDiscounts(appartement, res.aankomst, res.vertrek, user);
+        price = priceInfo.total;
+      } else if (typeof calculatePrice === 'function') {
+        const priceInfo = calculatePrice(appartement, res.aankomst, res.vertrek, user || null);
+        price = priceInfo.total;
+      }
+    }
+    
+    // Status badge
+    const statusBadge = res.status === 'betaald' 
+      ? '<span class="status-badge paid">€ Betaald</span>'
+      : res.status === 'goedgekeurd'
+      ? '<span class="status-badge approved">✓ Goedgekeurd</span>'
+      : '<span class="status-badge pending">⏳ In afwachting</span>';
+    
+    // Payment button (only show if not paid)
+    const paymentButton = res.status !== 'betaald' 
+      ? `<button class="btn-primary" onclick="markReservationAsPaid('${res.id}')" style="margin-right: 0.5em;">Markeer als Betaald</button>`
+      : '';
+    
+    // Delete button
+    const deleteButton = `<button class="btn-delete" onclick="handleDeleteReservation('${res.id}')">Verwijderen</button>`;
+    
     return `
-      <div class="transaction-item">
-        <div class="transaction-info">
-          <strong>${trans.userName || 'Onbekend'}</strong>
-          <div>${trans.description}</div>
-          <div style="font-size: 0.9em; color: #666;">${date}</div>
+      <div class="reservation-item" style="margin-bottom: 1.5em; padding: 1.5em; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div class="reservation-info">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.8em;">
+            <div>
+              <strong style="font-size: 1.1em;">${res.naam}</strong>
+              <div style="font-size: 0.9em; color: #666; margin-top: 0.3em;">${res.email}</div>
+            </div>
+            ${statusBadge}
+          </div>
+          
+          <div style="margin: 0.8em 0;">
+            <strong>Periode:</strong> ${aankomst} - ${vertrek}
+            ${res.personen ? ` (${res.personen} persoon${res.personen > 1 ? 'en' : ''})` : ''}
+          </div>
+          
+          <div style="margin: 0.8em 0;">
+            <strong>Appartement:</strong> ${res.appartement === '35' || res.appartement === 'A' ? '35' : (res.appartement === '36' || res.appartement === 'B' ? '36' : res.appartement)}
+          </div>
+          
+          <div style="margin: 0.8em 0; padding: 0.8em; background: #f5f5f5; border-radius: 4px;">
+            <strong style="font-size: 1.2em; color: #1565c0;">Te betalen: €${price ? price.toFixed(2) : '0.00'}</strong>
+          </div>
+          
+          ${res.opmerking ? `<div style="margin: 0.8em 0; padding: 0.8em; background: #fff3cd; border-radius: 4px; font-style: italic; color: #856404;">${res.opmerking}</div>` : ''}
+          
+          <div style="font-size: 0.85em; color: #666; margin-top: 0.8em;">
+            Aangemaakt: ${created}
+          </div>
         </div>
-        <div class="transaction-amount">
-          <strong style="color: ${trans.amount >= 0 ? '#28a745' : '#dc3545'};">
-            €${Math.abs(trans.amount).toFixed(2)}
-          </strong>
-          <div style="font-size: 0.85em;">${trans.status || 'open'}</div>
+        
+        <div class="reservation-actions" style="margin-top: 1em; display: flex; gap: 0.5em; flex-wrap: wrap;">
+          ${paymentButton}
+          ${deleteButton}
         </div>
       </div>
     `;
   }).join('');
 }
 
-// Load reservations for admin
-function loadAdminReservations() {
+// Mark reservation as paid
+function markReservationAsPaid(reservationId) {
   if (!checkAdminAccess()) return;
   
-  // Use displayReservations with the admin container ID
-  if (typeof displayReservations === 'function') {
-    displayReservations('adminReservationsListContent');
-  } else {
-    // Fallback if displayReservations is not available
-    const container = document.getElementById('adminReservationsListContent');
-    if (!container) return;
-    
-    const reservations = typeof getReservations === 'function' ? getReservations() : [];
-    if (reservations.length === 0) {
-      container.innerHTML = '<div class="empty-state">Nog geen reserveringen</div>';
-    } else {
-      container.innerHTML = reservations.map(res => {
-        const aankomst = new Date(res.aankomst).toLocaleDateString('nl-NL');
-        const vertrek = new Date(res.vertrek).toLocaleDateString('nl-NL');
-        return `
-          <div class="reservation-item">
-            <div class="reservation-info">
-              <strong>${res.naam}</strong>
-              <div class="reservation-dates">${aankomst} - ${vertrek}</div>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
+  const reservations = typeof getReservations === 'function' ? getReservations() : [];
+  const reservation = reservations.find(r => r.id === reservationId);
+  
+  if (!reservation) {
+    alert('Reservering niet gevonden');
+    return;
   }
+  
+  // Update status to 'betaald'
+  reservation.status = 'betaald';
+  
+  // Save reservations
+  if (typeof saveReservations === 'function') {
+    saveReservations(reservations);
+  }
+  
+  // Reload transactions/reservations list
+  loadTransactions();
+  
+  // Also update on kalender.html if it exists
+  if (typeof displayReservations === 'function') {
+    displayReservations();
+  }
+  
+  alert('Reservering gemarkeerd als betaald');
 }
 
 // Tab switching
@@ -292,8 +358,6 @@ function initAdminTabs() {
         loadUsers();
       } else if (targetTab === 'transactions') {
         loadTransactions();
-      } else if (targetTab === 'reservations') {
-        loadAdminReservations();
       }
     });
   });
@@ -305,12 +369,6 @@ document.addEventListener('DOMContentLoaded', () => {
   
   initAdminTabs();
   loadUsers();
-  
-  // Load reservations if reservations tab is active
-  const reservationsTab = document.querySelector('.admin-tab[data-tab="reservations"]');
-  if (reservationsTab && reservationsTab.classList.contains('active')) {
-    loadAdminReservations();
-  }
   
   // User settings form
   const settingsForm = document.getElementById('userSettingsForm');
