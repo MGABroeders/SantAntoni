@@ -965,7 +965,7 @@ body {
   
   .gallery-item {
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     border-radius: 12px;
     aspect-ratio: 4/3;
     cursor: pointer;
@@ -982,6 +982,33 @@ body {
     height: 100%;
     object-fit: cover;
     display: block;
+    border-radius: 12px;
+  }
+  
+  .gallery-item .btn-delete {
+    position: absolute;
+    top: 0.5em;
+    right: 0.5em;
+    z-index: 10;
+    background-color: rgba(220, 53, 69, 0.9);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    font-size: 1.2em;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+  }
+  
+  .gallery-item .btn-delete:hover {
+    background-color: rgba(220, 53, 69, 1);
+    transform: scale(1.1);
   }
   
   .gallery-item.hidden {

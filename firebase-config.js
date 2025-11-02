@@ -13,6 +13,7 @@ const firebaseConfig = {
 let firebaseApp;
 let firebaseDB;
 let firebaseAuth;
+let firebaseStorage;
 
 // Initialize Firebase
 function initFirebase() {
@@ -24,6 +25,7 @@ function initFirebase() {
   firebaseApp = firebase.initializeApp(firebaseConfig);
   firebaseDB = firebase.firestore();
   firebaseAuth = firebase.auth();
+  firebaseStorage = firebase.storage();
   console.log('Firebase succesvol geïnitialiseerd');
   return true;
 }

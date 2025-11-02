@@ -30,6 +30,37 @@
 
   <section id="fotos">
     <h2>Foto Galerij</h2>
+    
+    <!-- Upload formulier voor ingelogde gebruikers -->
+    <div id="photoUploadSection" style="display: none; margin-bottom: 2em; padding: 1.5em; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <h3>Foto Uploaden</h3>
+      <form id="photoUploadForm" style="display: flex; flex-direction: column; gap: 1em;">
+        <div class="form-group">
+          <label for="photoFile">Selecteer foto:</label>
+          <input type="file" id="photoFile" accept="image/*" required>
+        </div>
+        <div class="form-group">
+          <label for="photoCategory">Categorie:</label>
+          <select id="photoCategory" required>
+            <option value="A">Appartement 35</option>
+            <option value="B">Appartement 36</option>
+            <option value="omgeving">Omgeving</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="photoDescription">Beschrijving (optioneel):</label>
+          <input type="text" id="photoDescription" placeholder="Korte beschrijving...">
+        </div>
+        <button type="submit" class="btn-primary">Foto Uploaden</button>
+      </form>
+    </div>
+    
+    <!-- Login prompt voor niet-ingelogde gebruikers -->
+    <div id="photoLoginPrompt" style="display: none; margin-bottom: 2em; padding: 1.5em; background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; text-align: center;">
+      <p style="margin: 0 0 1em 0; color: #856404;">Je moet ingelogd zijn om foto's te uploaden.</p>
+      <a href="login.html" class="btn-primary">Inloggen</a>
+    </div>
+    
     <div class="photo-gallery">
       <div class="gallery-tabs">
         <button class="gallery-tab active" data-gallery="all">Alle foto's</button>
@@ -39,13 +70,6 @@
       </div>
       <div class="gallery-grid" id="galleryGrid">
         <!-- Foto's worden hier dynamisch geladen -->
-        <div class="gallery-item" data-category="A">
-          <img src="foto1.jpg" alt="Appartement 35" onclick="openLightbox(this.src, this.alt)">
-        </div>
-        <div class="gallery-item" data-category="B">
-          <img src="foto2.jpg" alt="Appartement 36" onclick="openLightbox(this.src, this.alt)">
-        </div>
-        <!-- Meer foto's kunnen hier worden toegevoegd -->
       </div>
     </div>
     
@@ -60,9 +84,170 @@
     <p>&copy; 2025 Familie Sant Antoni</p>
   </footer>
 
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+  
+  <script src="firebase-config.js"></script>
   <script src="auth.js"></script>
   <script src="auth-ui.js"></script>
+  <script src="firebase-storage.js"></script>
   <script src="script.js"></script>
+  
+  <script>
+    // Initialize Firebase and load photos
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Initialize Firebase
+      if (typeof initFirebase === 'function') {
+        initFirebase();
+      }
+      
+      // Wait a bit for Firebase to initialize
+      setTimeout(() => {
+        // Update upload form visibility
+        updatePhotoUploadForm();
+        
+        // Load photos
+        loadPhotos();
+        
+        // Subscribe to real-time updates
+        if (typeof subscribeToPhotos === 'function') {
+          subscribeToPhotos((photos) => {
+            displayPhotos(photos);
+          });
+        }
+        
+        // Setup upload form
+        const uploadForm = document.getElementById('photoUploadForm');
+        if (uploadForm) {
+          uploadForm.addEventListener('submit', handlePhotoUpload);
+        }
+      }, 500);
+    });
+    
+    // Update photo upload form visibility
+    function updatePhotoUploadForm() {
+      const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+      const loggedIn = typeof isLoggedIn === 'function' ? isLoggedIn() : false;
+      
+      const uploadSection = document.getElementById('photoUploadSection');
+      const loginPrompt = document.getElementById('photoLoginPrompt');
+      
+      if (uploadSection) {
+        uploadSection.style.display = (user && loggedIn) ? 'block' : 'none';
+      }
+      if (loginPrompt) {
+        loginPrompt.style.display = (user && loggedIn) ? 'none' : 'block';
+      }
+    }
+    
+    // Load photos from Firebase
+    async function loadPhotos() {
+      if (typeof getPhotos === 'function') {
+        const photos = await getPhotos();
+        displayPhotos(photos);
+      }
+    }
+    
+    // Display photos in gallery
+    function displayPhotos(photos) {
+      const grid = document.getElementById('galleryGrid');
+      if (!grid) return;
+      
+      if (photos.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2em; color: #999;">Nog geen foto\'s geüpload</div>';
+        return;
+      }
+      
+      const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+      const isAdmin = typeof isAdminUser === 'function' ? isAdminUser() : false;
+      
+      grid.innerHTML = photos.map(photo => {
+        const canDelete = isAdmin || (user && (photo.uploadedById === user.id || photo.uploadedByEmail === user.email));
+        const deleteButton = canDelete 
+          ? `<button class="btn-delete" onclick="handleDeletePhoto('${photo.id}', '${photo.url}')" style="position: absolute; top: 0.5em; right: 0.5em; padding: 0.3em 0.6em; font-size: 0.8em;">×</button>`
+          : '';
+        
+        return `
+          <div class="gallery-item" data-category="${photo.category || 'all'}">
+            ${deleteButton}
+            <img src="${photo.url}" alt="${photo.description || 'Foto'}" onclick="openLightbox('${photo.url}', '${photo.description || ''}')" 
+                 style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;">
+          </div>
+        `;
+      }).join('');
+      
+      // Re-init gallery tabs
+      if (typeof initGallery === 'function') {
+        initGallery();
+      }
+    }
+    
+    // Handle photo upload
+    async function handlePhotoUpload(e) {
+      e.preventDefault();
+      
+      const fileInput = document.getElementById('photoFile');
+      const categoryInput = document.getElementById('photoCategory');
+      const descriptionInput = document.getElementById('photoDescription');
+      
+      if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        alert('Selecteer eerst een foto');
+        return;
+      }
+      
+      const file = fileInput.files[0];
+      const category = categoryInput ? categoryInput.value : 'all';
+      const description = descriptionInput ? descriptionInput.value : '';
+      
+      // Show loading
+      const submitButton = e.target.querySelector('button[type="submit"]');
+      const originalText = submitButton ? submitButton.textContent : '';
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Uploaden...';
+      }
+      
+      try {
+        if (typeof uploadPhoto === 'function') {
+          const result = await uploadPhoto(file, category, description);
+          if (result) {
+            alert('Foto succesvol geüpload!');
+            // Reset form
+            if (fileInput) fileInput.value = '';
+            if (descriptionInput) descriptionInput.value = '';
+            // Photos will auto-update via real-time listener
+          }
+        } else {
+          alert('Upload functie niet beschikbaar');
+        }
+      } catch (error) {
+        console.error('Upload error:', error);
+        alert('Fout bij uploaden: ' + error.message);
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = originalText;
+        }
+      }
+    }
+    
+    // Handle photo deletion
+    async function handleDeletePhoto(photoId, photoUrl) {
+      if (confirm('Weet je zeker dat je deze foto wilt verwijderen?')) {
+        if (typeof deletePhoto === 'function') {
+          const success = await deletePhoto(photoId, photoUrl);
+          if (success) {
+            // Photos will auto-update via real-time listener
+          }
+        } else {
+          alert('Verwijder functie niet beschikbaar');
+        }
+      }
+    }
+  </script>
 </body>
 </html>
 
