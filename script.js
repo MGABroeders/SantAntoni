@@ -88,7 +88,19 @@ function calculatePrice(apartement, aankomst, vertrek, user = null) {
     const seizoen = getSeizoen(maand);
     const prijsPerNacht = appPricing[seizoen];
     
-    console.log(`Date: ${currentDate.toLocaleDateString()}, Month: ${maand}, Seizoen: ${seizoen}, Prijs: €${prijsPerNacht}`);
+    // Check of prijs valid is
+    if (!prijsPerNacht || isNaN(prijsPerNacht) || prijsPerNacht <= 0) {
+      console.error(`Invalid price for App ${appartementId}, Familie ${family}, Seizoen ${seizoen}:`, prijsPerNacht);
+      console.error('Available pricing:', appPricing);
+      // Skip deze dag of return error
+      currentDate.setDate(currentDate.getDate() + 1);
+      continue;
+    }
+    
+    // Only log first few days to avoid console spam
+    if (breakdown.length < 3) {
+      console.log(`Date: ${currentDate.toLocaleDateString()}, Month: ${maand}, Seizoen: ${seizoen}, Prijs: €${prijsPerNacht}`);
+    }
     
     // Speciale logica voor App 36 zomer (€675/week alleen voor Familie A/C)
     if (appartementId === '36' && seizoen === 'zomer' && (family === 'A' || family === 'C')) {
@@ -110,6 +122,12 @@ function calculatePrice(apartement, aankomst, vertrek, user = null) {
     }
     
     currentDate.setDate(currentDate.getDate() + 1);
+  }
+  
+  // Check of we data hebben
+  if (breakdown.length === 0) {
+    console.error('No breakdown items generated! Check dates and pricing.');
+    return { total: 0, breakdown: '', breakdownItems: [] };
   }
   
   // Groepeer per seizoen voor overzicht, rekening houdend met weekly pricing
@@ -235,7 +253,19 @@ function checkPreseasonConstraint(aankomst, user, appartement) {
 
 // Bepaal totaalprijs met kortingen
 function calculatePriceWithDiscounts(apartement, aankomst, vertrek, user) {
+  if (!user) {
+    console.error('calculatePriceWithDiscounts: user is null/undefined');
+    return calculatePrice(apartement, aankomst, vertrek, null);
+  }
+  
   const basePrice = calculatePrice(apartement, aankomst, vertrek, user);
+  
+  // Check if basePrice is valid
+  if (!basePrice || basePrice.total === 0) {
+    console.error('calculatePriceWithDiscounts: basePrice is invalid:', basePrice);
+    return basePrice || { total: 0, breakdown: '', breakdownItems: [] };
+  }
+  
   let discounts = [];
   let discountAmount = 0;
   
@@ -243,7 +273,12 @@ function calculatePriceWithDiscounts(apartement, aankomst, vertrek, user) {
   if (user.role === 'admin') {
     discountAmount = basePrice.total;
     discounts.push({ type: 'beheerder', amount: discountAmount, percentage: 100 });
-    return { total: 0, discounts, breakdown: basePrice.breakdownItems };
+    return { 
+      total: 0, 
+      discounts, 
+      breakdownItems: basePrice.breakdownItems || [],
+      baseTotal: basePrice.total
+    };
   }
   
   // Langverblijfkorting: 5% bij 3+ weken buiten zomer
@@ -946,9 +981,25 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Build detailed breakdown list
         const breakdownContainer = document.getElementById('priceBreakdown');
-        if (breakdownContainer && priceInfo.breakdownItems) {
+        
+        // Validate priceInfo
+        if (!priceInfo || (priceInfo.total === 0 && (!priceInfo.breakdownItems || priceInfo.breakdownItems.length === 0))) {
+          console.error('Invalid priceInfo:', priceInfo);
+          if (breakdownContainer) {
+            const family = user && user.family ? user.family : 'C';
+            breakdownContainer.innerHTML = `<div style="color: #d32f2f; padding: 1em; background: #ffebee; border-radius: 4px;">
+              <strong>Fout bij prijsberekening</strong><br>
+              Appartement: ${appartement}<br>
+              Familie: ${family}<br>
+              Check console voor details.
+            </div>`;
+          }
+          return;
+        }
+        
+        if (breakdownContainer) {
           // Show user info for debugging
-          const family = user && user.family ? user.family : 'C (geen familie)';
+          const family = user && user.family ? user.family : 'C';
           const familyName = family === 'A' ? 'Familie A' : (family === 'B' ? 'Familie B' : 'Familie C (geen familie)');
           
           let html = `<div style="margin-bottom: 1em; padding: 0.5em; background: #f5f5f5; border-radius: 4px; font-size: 0.9em;">
@@ -957,13 +1008,22 @@ document.addEventListener('DOMContentLoaded', () => {
             <strong>Periode:</strong> ${new Date(aankomst).toLocaleDateString('nl-NL')} - ${new Date(vertrek).toLocaleDateString('nl-NL')}
           </div>`;
           
-          html += priceInfo.breakdownItems.map(item => {
-            if (item.isWeekly) {
-              return `<div><strong>${item.count} week(en)</strong> ${item.naam} @ €${item.prijs.toFixed(2)}/week = <strong>€${(item.count * item.prijs).toFixed(2)}</strong></div>`;
-            } else {
-              return `<div><strong>${item.count} nacht(en)</strong> ${item.naam} @ €${item.prijs.toFixed(2)}/nacht = <strong>€${(item.count * item.prijs).toFixed(2)}</strong></div>`;
-            }
-          }).join('');
+          // Check if breakdownItems exists and has items
+          if (priceInfo.breakdownItems && priceInfo.breakdownItems.length > 0) {
+            html += priceInfo.breakdownItems.map(item => {
+              if (!item || !item.prijs || item.prijs <= 0) {
+                console.error('Invalid breakdown item:', item);
+                return '';
+              }
+              if (item.isWeekly) {
+                return `<div><strong>${item.count} week(en)</strong> ${item.naam} @ €${item.prijs.toFixed(2)}/week = <strong>€${(item.count * item.prijs).toFixed(2)}</strong></div>`;
+              } else {
+                return `<div><strong>${item.count} nacht(en)</strong> ${item.naam} @ €${item.prijs.toFixed(2)}/nacht = <strong>€${(item.count * item.prijs).toFixed(2)}</strong></div>`;
+              }
+            }).filter(h => h !== '').join('');
+          } else {
+            html += '<div style="color: #d32f2f;">Geen prijsdetails beschikbaar. Check console voor details.</div>';
+          }
           
           // Add discounts if any
           if (priceInfo.discounts && priceInfo.discounts.length > 0) {
@@ -974,18 +1034,20 @@ document.addEventListener('DOMContentLoaded', () => {
             html += '</div>';
           }
           
-          // Add totals
+          // Add totals - always show, even if 0 for debugging
           if (priceInfo.baseTotal !== undefined && priceInfo.baseTotal !== priceInfo.total) {
             html += `<div style="margin-top: 1em; padding-top: 1em; border-top: 1px solid #ddd;"><strong>Subtotaal: €${priceInfo.baseTotal.toFixed(2)}</strong></div>`;
           }
-          html += `<div style="margin-top: 0.5em; font-size: 1.2em; font-weight: bold; color: #1565c0;"><strong>Totaal: €${priceInfo.total.toFixed(2)}</strong></div>`;
+          
+          const totalDisplay = priceInfo.total && priceInfo.total > 0 ? priceInfo.total.toFixed(2) : '0.00 (CHECK CONSOLE!)';
+          html += `<div style="margin-top: 0.5em; font-size: 1.2em; font-weight: bold; color: ${priceInfo.total > 0 ? '#1565c0' : '#d32f2f'};"><strong>Totaal: €${totalDisplay}</strong></div>`;
           
           console.log('Setting breakdown HTML:', html);
+          console.log('Full priceInfo:', JSON.stringify(priceInfo, null, 2));
           console.log('User family:', family, 'Appartement:', appartement, 'AppartementId:', appartement === 'A' ? '35' : '36');
           breakdownContainer.innerHTML = html;
         } else {
-          console.log('No breakdown items or container not found');
-          console.log('breakdownContainer:', breakdownContainer, 'priceInfo.breakdownItems:', priceInfo.breakdownItems);
+          console.error('breakdownContainer not found!');
         }
         
         if (priceDisplay) {
