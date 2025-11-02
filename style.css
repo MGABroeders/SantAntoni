@@ -470,9 +470,40 @@ body {
     font-weight: bold;
   }
   
-   .calendar-day.reserved,
-   .calendar-day.reserved-A,
-   .calendar-day.reserved-B {
+   /* Pending reservations (in afwachting) - lichter grijs */
+   .calendar-day.reserved-pending,
+   .calendar-day.reserved-A.reserved-pending,
+   .calendar-day.reserved-B.reserved-pending,
+   .calendar-day.reserved.reserved-pending {
+     background: repeating-linear-gradient(
+       45deg,
+       #f5f5f5,
+       #f5f5f5 5px,
+       #d3d3d3 5px,
+       #d3d3d3 10px
+     );
+     border-color: #999;
+   }
+   
+   /* Approved reservations (goedgekeurd/betaald) - donkerder grijs */
+   .calendar-day.reserved-approved,
+   .calendar-day.reserved-A.reserved-approved,
+   .calendar-day.reserved-B.reserved-approved,
+   .calendar-day.reserved.reserved-approved {
+     background: repeating-linear-gradient(
+       45deg,
+       #d3d3d3,
+       #d3d3d3 5px,
+       #a0a0a0 5px,
+       #a0a0a0 10px
+     );
+     border-color: #666;
+   }
+   
+   /* Fallback for old reservations without status */
+   .calendar-day.reserved:not(.reserved-approved):not(.reserved-pending),
+   .calendar-day.reserved-A:not(.reserved-approved):not(.reserved-pending),
+   .calendar-day.reserved-B:not(.reserved-approved):not(.reserved-pending) {
      background: repeating-linear-gradient(
        45deg,
        #f5f5f5,

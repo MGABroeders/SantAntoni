@@ -428,26 +428,55 @@ function generateCalendarForApartment(apartment) {
     // Check reserveringen - filter per appartement als specifiek appartement is geselecteerd
     let dateReservations = getReservationsForDate(date, reservations);
     let isReserved = false;
+    let isApproved = false; // Geaccepteerd (goedgekeurd of betaald)
     
     if (apartment) {
       // Alleen reserveringen voor dit specifieke appartement
       dateReservations = dateReservations.filter(r => r.appartement === apartment);
       isReserved = isDateReservedForApartment(date, apartment, reservations);
       
+      // Check if any reservation for this date is approved (goedgekeurd or betaald)
+      const apartmentReservations = dateReservations.filter(r => r.appartement === apartment);
+      isApproved = apartmentReservations.some(r => r.status === 'goedgekeurd' || r.status === 'betaald');
+      
       if (isReserved) {
         dayDiv.classList.add(`reserved-${apartment}`);
+        if (isApproved) {
+          dayDiv.classList.add('reserved-approved');
+        } else {
+          dayDiv.classList.add('reserved-pending');
+        }
       }
     } else {
       // Originele logica voor single calendar
       const reservedA = isDateReservedForApartment(date, 'A', reservations);
       const reservedB = isDateReservedForApartment(date, 'B', reservations);
       
+      // Check if any reservation for this date is approved
+      const allDateReservations = dateReservations;
+      isApproved = allDateReservations.some(r => r.status === 'goedgekeurd' || r.status === 'betaald');
+      
       if (reservedA && reservedB) {
         dayDiv.classList.add('reserved');
+        if (isApproved) {
+          dayDiv.classList.add('reserved-approved');
+        } else {
+          dayDiv.classList.add('reserved-pending');
+        }
       } else if (reservedA) {
         dayDiv.classList.add('reserved-A');
+        if (isApproved) {
+          dayDiv.classList.add('reserved-approved');
+        } else {
+          dayDiv.classList.add('reserved-pending');
+        }
       } else if (reservedB) {
         dayDiv.classList.add('reserved-B');
+        if (isApproved) {
+          dayDiv.classList.add('reserved-approved');
+        } else {
+          dayDiv.classList.add('reserved-pending');
+        }
       }
     }
     
