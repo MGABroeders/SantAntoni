@@ -357,7 +357,7 @@ function renderReservations(reservations, container) {
 }
 
 // Mark reservation as paid
-function markReservationAsPaid(reservationId) {
+async function markReservationAsPaid(reservationId) {
   if (!checkAdminAccess()) return;
   
   const reservations = typeof getReservations === 'function' ? getReservations() : [];
@@ -371,18 +371,40 @@ function markReservationAsPaid(reservationId) {
   // Update status to 'betaald'
   reservation.status = 'betaald';
   
-  // Save reservations
+  // Save reservations - wait for Firebase sync
   if (typeof saveReservations === 'function') {
     saveReservations(reservations);
+    
+    // If Firebase is available, also sync directly to ensure it's saved
+    if (typeof firebaseDB !== 'undefined' && firebaseDB && reservation.id) {
+      try {
+        // Update directly in Firestore to ensure immediate sync
+        await firebaseDB.collection('reservations').doc(reservation.id).update({
+          status: 'betaald'
+        });
+        console.log('Reservering status bijgewerkt in Firebase:', reservation.id);
+      } catch (error) {
+        console.error('Fout bij updaten reservering status in Firebase:', error);
+        // Continue anyway, saveReservations might have worked
+      }
+    }
   }
   
-  // Reload transactions/reservations list
-  loadTransactions();
-  
-  // Also update on kalender.html if it exists
-  if (typeof displayReservations === 'function') {
-    displayReservations();
-  }
+  // Wait a bit for Firebase to sync, then reload
+  setTimeout(() => {
+    // Reload transactions/reservations list
+    loadTransactions();
+    
+    // Also update on kalender.html if it exists
+    if (typeof displayReservations === 'function') {
+      displayReservations();
+    }
+    
+    // Also update calendar if it exists
+    if (typeof generateCalendar === 'function') {
+      generateCalendar();
+    }
+  }, 500);
   
   alert('Reservering gemarkeerd als betaald');
 }
