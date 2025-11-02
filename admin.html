@@ -244,7 +244,8 @@
           if (typeof subscribeToReservations === 'function') {
             subscribeToReservations((reservations) => {
               console.log('Admin: Reserveringen update ontvangen:', reservations.length);
-              // Update localStorage
+              
+              // IMPORTANT: Update localStorage from Firebase (this is the source of truth)
               localStorage.setItem('santantoni_reservations', JSON.stringify(reservations));
               
               // Reload admin reservations list if transactions tab is active

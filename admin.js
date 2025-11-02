@@ -371,23 +371,27 @@ async function markReservationAsPaid(reservationId) {
   // Update status to 'betaald'
   reservation.status = 'betaald';
   
-  // Save reservations - wait for Firebase sync
-  if (typeof saveReservations === 'function') {
-    saveReservations(reservations);
-    
-    // If Firebase is available, also sync directly to ensure it's saved
-    if (typeof firebaseDB !== 'undefined' && firebaseDB && reservation.id) {
-      try {
-        // Update directly in Firestore to ensure immediate sync
-        await firebaseDB.collection('reservations').doc(reservation.id).update({
-          status: 'betaald'
-        });
-        console.log('Reservering status bijgewerkt in Firebase:', reservation.id);
-      } catch (error) {
-        console.error('Fout bij updaten reservering status in Firebase:', error);
-        // Continue anyway, saveReservations might have worked
-      }
+  // Update Firebase FIRST (direct update, no batch overwrite)
+  if (typeof firebaseDB !== 'undefined' && firebaseDB && reservation.id) {
+    try {
+      // Update directly in Firestore - this is the source of truth
+      await firebaseDB.collection('reservations').doc(reservation.id).update({
+        status: 'betaald',
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      console.log('Reservering status bijgewerkt in Firebase:', reservation.id);
+    } catch (error) {
+      console.error('Fout bij updaten reservering status in Firebase:', error);
+      alert('Fout bij opslaan in Firebase. Check console voor details.');
+      return; // Stop if Firebase update fails
     }
+  }
+  
+  // Update localStorage AFTER successful Firebase update
+  // This way, if page reloads, real-time listener will get correct data from Firebase
+  if (typeof saveReservations === 'function') {
+    // Save to localStorage only (don't trigger syncReservationsToFirebase)
+    localStorage.setItem('santantoni_reservations', JSON.stringify(reservations));
   }
   
   // Wait a bit for Firebase to sync, then reload
@@ -425,15 +429,7 @@ async function handleDeleteReservation(reservationId) {
     return;
   }
   
-  // Remove from local array
-  const filtered = reservations.filter(r => r.id !== reservationId);
-  
-  // Save locally first
-  if (typeof saveReservations === 'function') {
-    saveReservations(filtered);
-  }
-  
-  // Delete from Firebase directly
+  // Delete from Firebase FIRST (this is the source of truth)
   if (typeof firebaseDB !== 'undefined' && firebaseDB && reservation.id) {
     try {
       await firebaseDB.collection('reservations').doc(reservation.id).delete();
@@ -441,9 +437,16 @@ async function handleDeleteReservation(reservationId) {
     } catch (error) {
       console.error('Fout bij verwijderen reservering uit Firebase:', error);
       alert('Fout bij verwijderen reservering uit Firebase. Check console voor details.');
-      return;
+      return; // Stop if Firebase delete fails
     }
   }
+  
+  // Update localStorage AFTER successful Firebase delete
+  // Remove from local array
+  const filtered = reservations.filter(r => r.id !== reservationId);
+  
+  // Save to localStorage only (don't trigger syncReservationsToFirebase)
+  localStorage.setItem('santantoni_reservations', JSON.stringify(filtered));
   
   // Wait a bit for Firebase to sync, then reload
   setTimeout(() => {
