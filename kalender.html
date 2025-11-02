@@ -120,45 +120,38 @@
       if (typeof initFirebase === 'function') {
         initFirebase();
         
-        // Start syncing na 2 seconden (geeft Firebase tijd om te laden)
+        // Real-time listeners voor directe updates
         setTimeout(() => {
-          if (typeof syncReservationsFromFirebase === 'function') {
-            syncReservationsFromFirebase().then(() => {
-              console.log('Reserveringen gesynchroniseerd van Firebase');
-              // Herlaad kalender als die bestaat
+          // Real-time listener voor reserveringen
+          if (typeof subscribeToReservations === 'function') {
+            subscribeToReservations((reservations) => {
+              console.log('Reserveringen update ontvangen:', reservations.length);
+              // Update localStorage
+              localStorage.setItem('santantoni_reservations', JSON.stringify(reservations));
+              // Herlaad kalender
               if (typeof generateCalendar === 'function') {
                 generateCalendar();
+              }
+              // Herlaad reserveringen lijst
+              if (typeof displayReservations === 'function') {
+                displayReservations();
               }
             });
           }
           
-          if (typeof syncMessagesFromFirebase === 'function') {
-            syncMessagesFromFirebase().then(() => {
-              console.log('Berichten gesynchroniseerd van Firebase');
+          // Real-time listener voor berichten
+          if (typeof subscribeToMessages === 'function') {
+            subscribeToMessages((messages) => {
+              console.log('Berichten update ontvangen:', messages.length);
+              // Update localStorage
+              localStorage.setItem('santantoni_messages', JSON.stringify(messages));
+              // Herlaad berichten
               if (typeof displayMessages === 'function') {
                 displayMessages();
               }
             });
           }
         }, 2000);
-        
-        // Sync elke 5 seconden
-        setInterval(() => {
-          if (typeof syncReservationsFromFirebase === 'function') {
-            syncReservationsFromFirebase().then(() => {
-              if (typeof generateCalendar === 'function') {
-                generateCalendar();
-              }
-            });
-          }
-          if (typeof syncMessagesFromFirebase === 'function') {
-            syncMessagesFromFirebase().then(() => {
-              if (typeof displayMessages === 'function') {
-                displayMessages();
-              }
-            });
-          }
-        }, 5000);
       }
     });
   </script>
