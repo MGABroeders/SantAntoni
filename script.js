@@ -21,8 +21,8 @@ const PRIJZEN = {
 
 // Seizoen definities (voor App 35/36 zijn zomer en laag anders dan voorheen)
 function getSeizoen(maand) {
-  // 0=jan, 1=feb, etc. Zomer is juni en juli (5 en 6)
-  if (maand === 5 || maand === 6) return 'zomer';  // Juni en Juli
+  // 0=jan, 1=feb, etc. Zomer is juli en augustus (6 en 7)
+  if (maand === 6 || maand === 7) return 'zomer';  // Juli en Augustus
   return 'laag'; // Rest van het jaar
 }
 
@@ -201,7 +201,7 @@ function calculatePrice(apartement, aankomst, vertrek, user = null) {
 }
 
 function getSeizoenNaam(seizoen) {
-  const namen = { laag: 'Laagseizoen (buiten juni/juli)', zomer: 'Zomer (juni/juli)' };
+  const namen = { laag: 'Laagseizoen', zomer: 'Hoogseizoen' };
   return namen[seizoen] || seizoen;
 }
 
@@ -1044,15 +1044,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         if (breakdownContainer) {
-          // Show user info for debugging
-          const family = user && user.family ? user.family : 'C';
-          const familyName = family === 'A' ? 'Familie A' : (family === 'B' ? 'Familie B' : 'Familie C (geen familie)');
-          
-          let html = `<div style="margin-bottom: 1em; padding: 0.5em; background: #f5f5f5; border-radius: 4px; font-size: 0.9em;">
-            <strong>Appartement:</strong> ${appartement === 'A' ? '35' : '36'}<br>
-            <strong>Familie:</strong> ${familyName}<br>
-            <strong>Periode:</strong> ${new Date(aankomst).toLocaleDateString('nl-NL')} - ${new Date(vertrek).toLocaleDateString('nl-NL')}
-          </div>`;
+          let html = '';
           
           // Check if breakdownItems exists and has items
           if (priceInfo.breakdownItems && priceInfo.breakdownItems.length > 0) {
@@ -1062,9 +1054,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return '';
               }
               if (item.isWeekly) {
-                return `<div><strong>${item.count} week(en)</strong> ${item.naam} @ €${item.prijs.toFixed(2)}/week = <strong>€${(item.count * item.prijs).toFixed(2)}</strong></div>`;
+                return `<div><strong>${item.count} week(en)</strong> ${item.naam} €${item.prijs.toFixed(2)}/week = <strong>€${(item.count * item.prijs).toFixed(2)}</strong></div>`;
               } else {
-                return `<div><strong>${item.count} nacht(en)</strong> ${item.naam} @ €${item.prijs.toFixed(2)}/nacht = <strong>€${(item.count * item.prijs).toFixed(2)}</strong></div>`;
+                return `<div><strong>${item.count} nacht(en)</strong> ${item.naam} €${item.prijs.toFixed(2)}/nacht = <strong>€${(item.count * item.prijs).toFixed(2)}</strong></div>`;
               }
             }).filter(h => h !== '').join('');
           } else {
