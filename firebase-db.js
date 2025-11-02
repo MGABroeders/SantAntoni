@@ -18,12 +18,6 @@ function getReservations() {
   const data = localStorage.getItem('santantoni_reservations');
   const reservations = data ? JSON.parse(data) : [];
   
-  // Voeg proef reserveringen toe als er nog geen zijn
-  if (reservations.length === 0) {
-    initProefReserveringenSync();
-    return getReservations(); // Recursief opnieuw ophalen na initialisatie
-  }
-  
   return reservations;
 }
 
@@ -39,12 +33,6 @@ async function getReservationsAsync() {
     snapshot.forEach(doc => {
       reservations.push({ id: doc.id, ...doc.data() });
     });
-    
-    // Voeg proef reserveringen toe als er nog geen zijn
-    if (reservations.length === 0) {
-      await initProefReserveringen();
-      return await getReservationsAsync();
-    }
     
     return reservations.sort((a, b) => new Date(a.created) - new Date(b.created));
   } catch (error) {
