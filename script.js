@@ -926,8 +926,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const vertrek = document.getElementById('vertrek').value;
       const priceDisplay = document.getElementById('priceDisplay');
       
+      console.log('updatePrice called:', { user, appartement, aankomst, vertrek });
+      
       if (appartement && aankomst && vertrek && new Date(aankomst) < new Date(vertrek)) {
         const priceInfo = user ? calculatePriceWithDiscounts(appartement, aankomst, vertrek, user) : calculatePrice(appartement, aankomst, vertrek, null);
+        
+        console.log('priceInfo:', priceInfo);
         
         // Build detailed breakdown list
         const breakdownContainer = document.getElementById('priceBreakdown');
@@ -950,12 +954,20 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           html += `<div><strong>Totaal = €${priceInfo.total.toFixed(2)}</strong></div>`;
           
+          console.log('Setting breakdown HTML:', html);
           breakdownContainer.innerHTML = html;
+        } else {
+          console.log('No breakdown items or container not found');
         }
         
-        priceDisplay.style.display = 'block';
+        if (priceDisplay) {
+          priceDisplay.style.display = 'block';
+        }
       } else {
-        priceDisplay.style.display = 'none';
+        console.log('Invalid data, hiding price display');
+        if (priceDisplay) {
+          priceDisplay.style.display = 'none';
+        }
       }
     }
     
