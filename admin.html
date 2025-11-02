@@ -98,13 +98,23 @@
         </div>
         <button onclick="savePriorityPeriod()" class="btn-primary">Opslaan</button>
         
-        <div style="margin-top: 2em; padding: 1em; background: #fff3cd; border-radius: 8px; border: 2px solid #ffc107;">
-          <h5 style="margin-top: 0;">⚠️ Test Modus</h5>
-          <p style="margin: 0.5em 0;">Schakel de prioriteitsperiode tijdelijk uit om te testen zonder te wachten tot januari.</p>
-          <button onclick="togglePriorityPeriodBypass()" id="priorityBypassBtn" class="btn-secondary" style="margin-top: 0.5em;">
-            Prioriteitsperiode Uitschakelen
-          </button>
-          <div id="priorityBypassStatus" style="margin-top: 0.5em; font-weight: bold;"></div>
+        <div style="margin-top: 2em; padding: 1em; background: #e3f2fd; border-radius: 8px; border: 2px solid #2196f3;">
+          <h5 style="margin-top: 0;">📅 Datum Override (Test Modus)</h5>
+          <p style="margin: 0.5em 0;">Stel een aangepaste datum in voor testen. Dit overschrijft de huidige datum voor alle prioriteits checks.</p>
+          <div class="form-group" style="margin-top: 1em;">
+            <label for="dateOverride">Aangepaste datum:</label>
+            <input type="date" id="dateOverride" class="form-control">
+            <span class="help-text">Laat leeg om de echte datum te gebruiken</span>
+          </div>
+          <div style="margin-top: 1em;">
+            <button onclick="setDateOverride()" class="btn-primary" style="margin-right: 0.5em;">
+              Datum Instellen
+            </button>
+            <button onclick="clearDateOverride()" class="btn-secondary">
+              Datum Resetten
+            </button>
+          </div>
+          <div id="dateOverrideStatus" style="margin-top: 1em; font-weight: bold;"></div>
         </div>
       </div>
       

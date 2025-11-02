@@ -249,9 +249,83 @@ function renderReservations(reservations, container) {
     return;
   }
   
-  // Group reservations by year (based on arrival date)
+  // Filter pending cancellations
+  const pendingCancellations = reservations.filter(res => res.status === 'pending_cancellation');
+  const normalReservations = reservations.filter(res => res.status !== 'pending_cancellation');
+  
+  // Build HTML
+  let html = '';
+  
+  // Show pending cancellations section first
+  if (pendingCancellations.length > 0) {
+    html += `<div style="margin: 0 0 2em 0; padding: 1.5em; background: #fff3cd; border: 3px solid #ffc107; border-radius: 8px;">`;
+    html += `<h3 style="margin-top: 0; color: #856404;">⚠️ Reserveringen Wachtend op Annulering</h3>`;
+    html += `<p style="color: #856404; margin-bottom: 1em;">Deze reserveringen zijn aangevraagd voor annulering door de klant. Geef het geld terug en verwijder daarna de reservering.</p>`;
+    
+    pendingCancellations.forEach(res => {
+      const aankomst = new Date(res.aankomst).toLocaleDateString('nl-NL');
+      const vertrek = new Date(res.vertrek).toLocaleDateString('nl-NL');
+      const cancellationDate = res.cancellationRequested ? new Date(res.cancellationRequested).toLocaleDateString('nl-NL') : 'Onbekend';
+      
+      // Find user
+      const user = users.find(u => u.email === res.email || u.name === res.naam);
+      
+      // Calculate price
+      let price = res.prijs;
+      if (!price || price === 0) {
+        const family = user ? (user.family || 'C') : 'C';
+        const apartement = res.appartement === '35' || res.appartement === 'A' ? 'A' : (res.appartement === '36' || res.appartement === 'B' ? 'B' : res.appartement);
+        
+        if (typeof calculatePriceWithDiscounts === 'function' && user) {
+          const priceInfo = calculatePriceWithDiscounts(apartement, res.aankomst, res.vertrek, user);
+          price = priceInfo.total;
+        } else if (typeof calculatePrice === 'function') {
+          const priceInfo = calculatePrice(apartement, res.aankomst, res.vertrek, user || null);
+          price = priceInfo.total;
+        }
+      }
+      
+      html += `
+        <div style="margin-bottom: 1.5em; padding: 1.5em; background: white; border-radius: 8px; border: 2px solid #ffc107;">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.8em;">
+            <div>
+              <strong style="font-size: 1.1em;">${res.naam}</strong>
+              <div style="font-size: 0.9em; color: #666; margin-top: 0.3em;">${res.email}</div>
+            </div>
+            <span class="status-badge pending" style="background: #ffc107; color: #856404;">⏳ Annulering Aangevraagd</span>
+          </div>
+          <div style="margin: 0.8em 0;">
+            <strong>Periode:</strong> ${aankomst} - ${vertrek}
+            ${res.personen ? ` (${res.personen} persoon${res.personen > 1 ? 'en' : ''})` : ''}
+          </div>
+          <div style="margin: 0.8em 0;">
+            <strong>Appartement:</strong> ${res.appartement === 'A' || res.appartement === '35' ? '35' : '36'}
+          </div>
+          <div style="margin: 0.8em 0;">
+            <strong>Terug te betalen:</strong> €${price.toFixed(2)}
+          </div>
+          <div style="margin: 0.8em 0; font-size: 0.9em; color: #856404;">
+            <strong>Annulering aangevraagd op:</strong> ${cancellationDate}
+          </div>
+          ${res.opmerking ? `<div style="margin: 0.8em 0; color: #666; font-style: italic;">${res.opmerking}</div>` : ''}
+          <div style="margin-top: 1em; display: flex; gap: 0.5em;">
+            <button class="btn-primary" onclick="markRefundCompleted('${res.id}')" style="background: #28a745;">
+              Geld Teruggegeven
+            </button>
+            <button class="btn-delete" onclick="handleDeleteReservation('${res.id}')">
+              Verwijderen
+            </button>
+          </div>
+        </div>
+      `;
+    });
+    
+    html += `</div>`;
+  }
+  
+  // Group normal reservations by year
   const reservationsByYear = {};
-  reservations.forEach(res => {
+  normalReservations.forEach(res => {
     const year = new Date(res.aankomst).getFullYear();
     if (!reservationsByYear[year]) {
       reservationsByYear[year] = [];
@@ -263,7 +337,6 @@ function renderReservations(reservations, container) {
   const years = Object.keys(reservationsByYear).sort((a, b) => parseInt(b) - parseInt(a));
   
   // Build HTML grouped by year
-  let html = '';
   years.forEach(year => {
     // Year header
     html += `<div style="margin: 2em 0 1em 0; padding-bottom: 0.5em; border-bottom: 3px solid #1565c0;">
@@ -360,6 +433,11 @@ function renderReservations(reservations, container) {
 async function markReservationAsPaid(reservationId) {
   if (!checkAdminAccess()) return;
   
+  const confirmMsg = '⚠️ Weet je zeker dat je deze reservering als betaald wilt markeren?\n\nDit kan later niet meer ongedaan worden gemaakt.';
+  if (!confirm(confirmMsg)) {
+    return;
+  }
+  
   const reservations = typeof getReservations === 'function' ? getReservations() : [];
   const reservation = reservations.find(r => r.id === reservationId);
   
@@ -428,7 +506,8 @@ async function markReservationAsPaid(reservationId) {
 async function handleDeleteReservation(reservationId) {
   if (!checkAdminAccess()) return;
   
-  if (!confirm('Weet je zeker dat je deze reservering wilt verwijderen? Dit kan niet ongedaan worden gemaakt.')) {
+  const confirmMsg = '⚠️ Weet je zeker dat je deze reservering wilt verwijderen?\n\nDit kan niet ongedaan worden gemaakt.';
+  if (!confirm(confirmMsg)) {
     return;
   }
   
@@ -492,10 +571,33 @@ async function handleDeleteReservation(reservationId) {
   alert('Reservering verwijderd');
 }
 
-// Load priority bypass status on page load
-function initPriorityBypass() {
-  if (document.getElementById('priorityBypassBtn')) {
-    updatePriorityBypassUI();
+// Mark refund as completed and delete reservation
+async function markRefundCompleted(id) {
+  if (!checkAdminAccess()) return;
+  
+  const confirmMsg = '⚠️ Is het geld teruggegeven?\n\nDe reservering wordt daarna verwijderd.\n\nWeet je zeker dat je door wilt gaan?';
+  if (!confirm(confirmMsg)) {
+    return;
+  }
+  
+  // Direct delete (geld is teruggegeven)
+  await handleDeleteReservation(id);
+  alert('Geld teruggegeven en reservering verwijderd.');
+}
+
+// Load date override status on page load
+function initDateOverride() {
+  const dateOverrideInput = document.getElementById('dateOverride');
+  const dateOverrideStatus = document.getElementById('dateOverrideStatus');
+  
+  if (dateOverrideInput && dateOverrideStatus) {
+    const overrideDate = localStorage.getItem('dateOverride');
+    if (overrideDate) {
+      dateOverrideInput.value = overrideDate;
+      updateDateOverrideUI();
+    } else {
+      updateDateOverrideUI();
+    }
   }
 }
 
@@ -573,8 +675,8 @@ function initAdminTabs() {
     }
   }
   
-  // Load priority bypass status
-  initPriorityBypass();
+  // Load date override status
+  initDateOverride();
   
   // Load feature toggles
   initFeatureToggles();
@@ -691,45 +793,63 @@ function savePriorityPeriod() {
   alert(`Prioriteitsperiode opgeslagen: Maanden ${startMonth} t/m ${endMonth}`);
 }
 
-// Toggle priority period bypass (test modus)
-function togglePriorityPeriodBypass() {
-  const currentStatus = localStorage.getItem('priorityPeriodBypass') === 'true';
-  const newStatus = !currentStatus;
+// Set date override (test modus)
+function setDateOverride() {
+  const dateOverrideInput = document.getElementById('dateOverride');
+  if (!dateOverrideInput) return;
   
-  localStorage.setItem('priorityPeriodBypass', newStatus.toString());
+  const overrideDate = dateOverrideInput.value;
   
-  updatePriorityBypassUI();
-  
-  alert(newStatus ? 
-    '✅ Prioriteitsperiode is UITGESCHAKELD.\n\nIedereen kan nu reserveren ongeacht de periode.' :
-    '✅ Prioriteitsperiode is INGESCHAKELD.\n\nDe normale prioriteitsregels gelden weer.');
+  if (overrideDate) {
+    localStorage.setItem('dateOverride', overrideDate);
+    updateDateOverrideUI();
+    alert(`✅ Datum override ingesteld op: ${new Date(overrideDate).toLocaleDateString('nl-NL')}\n\nAlle prioriteits checks gebruiken nu deze datum.`);
+    
+    // Refresh pagina om datum wijziging door te voeren
+    location.reload();
+  } else {
+    alert('⚠️ Selecteer eerst een datum!');
+  }
 }
 
-// Update UI voor priority bypass status
-function updatePriorityBypassUI() {
-  const isBypassed = localStorage.getItem('priorityPeriodBypass') === 'true';
-  const btn = document.getElementById('priorityBypassBtn');
-  const status = document.getElementById('priorityBypassStatus');
-  
-  if (btn) {
-    btn.textContent = isBypassed ? 'Prioriteitsperiode Inschakelen' : 'Prioriteitsperiode Uitschakelen';
-    btn.style.background = isBypassed ? '#28a745' : '#6c757d';
+// Clear date override
+function clearDateOverride() {
+  localStorage.removeItem('dateOverride');
+  const dateOverrideInput = document.getElementById('dateOverride');
+  if (dateOverrideInput) {
+    dateOverrideInput.value = '';
   }
+  updateDateOverrideUI();
+  alert('✅ Datum override gereset. De echte datum wordt nu gebruikt.');
+  
+  // Refresh pagina om datum wijziging door te voeren
+  location.reload();
+}
+
+// Update UI voor date override status
+function updateDateOverrideUI() {
+  const overrideDate = localStorage.getItem('dateOverride');
+  const status = document.getElementById('dateOverrideStatus');
   
   if (status) {
-    if (isBypassed) {
-      status.textContent = '❌ UITGESCHAKELD - Prioriteitsregels zijn niet actief';
-      status.style.color = '#dc3545';
+    if (overrideDate) {
+      const date = new Date(overrideDate);
+      status.textContent = `📅 Override actief: ${date.toLocaleDateString('nl-NL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
+      status.style.color = '#2196f3';
     } else {
-      status.textContent = '✅ INGESCHAKELD - Prioriteitsregels zijn actief';
+      status.textContent = '✅ Gebruikt echte datum';
       status.style.color = '#28a745';
     }
   }
 }
 
-// Check of priority period bypass actief is
-function isPriorityPeriodBypassed() {
-  return localStorage.getItem('priorityPeriodBypass') === 'true';
+// Get current date (with override if set) - global function
+function getCurrentDate() {
+  const overrideDate = localStorage.getItem('dateOverride');
+  if (overrideDate) {
+    return new Date(overrideDate);
+  }
+  return new Date();
 }
 
 // Save pricing configuration

@@ -4,6 +4,15 @@
 const STORAGE_KEY = 'santantoni_reservations';
 const MESSAGES_KEY = 'santantoni_messages';
 
+// Get current date (with override if set) - gebruikt admin override voor testen
+function getCurrentDate() {
+  const overrideDate = localStorage.getItem('dateOverride');
+  if (overrideDate) {
+    return new Date(overrideDate);
+  }
+  return new Date();
+}
+
 // NIEUWE Prijsconfiguratie per appartement, familie en seizoen
 // Zomer = Juli en Augustus (maanden 6 en 7)
 const PRIJZEN = {
@@ -278,54 +287,154 @@ function checkPreseasonConstraint(aankomst, vertrek, user, apartement) {
     return { valid: true };
   }
   
-  const today = new Date();
+  const today = getCurrentDate(); // Gebruik override datum indien ingesteld
   const reservationStart = new Date(aankomst);
   const reservationEnd = new Date(vertrek);
   const year = reservationStart.getFullYear();
   
-  // Check of bypass actief is (test modus)
-  if (typeof isPriorityPeriodBypassed === 'function' && isPriorityPeriodBypassed()) {
-    return { valid: true }; // Skip alle prioriteits checks
+  // Check of reservering (gedeeltelijk) in voorkeursmaanden valt (juni-september = maanden 5-8)
+  let daysInSummerMonths = 0;
+  const checkDate = new Date(reservationStart);
+  
+  while (checkDate < reservationEnd) {
+    const month = checkDate.getMonth();
+    if (month >= 5 && month <= 8) { // Juni-september
+      daysInSummerMonths++;
+    }
+    checkDate.setDate(checkDate.getDate() + 1);
   }
   
-  // Voorseizoen: 1 januari tot 31 maart
-  if (today.getMonth() < 3) { // Voor 1 april
-    // Tel hoeveel dagen van de reservering in voorkeursmaanden (juni-september = maanden 5-8) vallen
-    let daysInSummerMonths = 0;
-    const checkDate = new Date(reservationStart);
+  // Als reservering valt in voorkeursmaanden (juni-september)
+  if (daysInSummerMonths > 0) {
+    const todayYear = today.getFullYear();
+    const reservationYear = year;
+    const todayMonth = today.getMonth(); // 0 = januari, 3 = april
     
-    while (checkDate < reservationEnd) {
-      const month = checkDate.getMonth();
-      if (month >= 5 && month <= 8) { // Juni-september
-        daysInSummerMonths++;
-      }
-      checkDate.setDate(checkDate.getDate() + 1);
-    }
-    
-    // Check of reservering (gedeeltelijk) in voorkeursmaanden valt
-    if (daysInSummerMonths > 0) {
-      // Check familie prioriteit (gebruik eerste zomermaand in reservering)
-      let firstSummerMonth = null;
-      const checkStartDate = new Date(reservationStart);
-      while (checkStartDate < reservationEnd && !firstSummerMonth) {
-        const month = checkStartDate.getMonth();
-        if (month >= 5 && month <= 8) {
-          firstSummerMonth = month;
-          break;
+    // Check of het reserveringsjaar hetzelfde is als het huidige jaar
+    if (reservationYear === todayYear) {
+      // Tijdens prioriteitsperiode (jan-maart = maanden 0-2)
+      if (todayMonth >= 0 && todayMonth < 3) {
+        // Check familie prioriteit (gebruik eerste voorkeursmaand in reservering)
+        let firstSummerMonth = null;
+        const checkStartDate = new Date(reservationStart);
+        while (checkStartDate < reservationEnd && !firstSummerMonth) {
+          const month = checkStartDate.getMonth();
+          if (month >= 5 && month <= 8) {
+            firstSummerMonth = month;
+            break;
+          }
+          checkStartDate.setDate(checkStartDate.getDate() + 1);
         }
-        checkStartDate.setDate(checkStartDate.getDate() + 1);
-      }
-      
-      if (firstSummerMonth !== null) {
-        const priorityFamily = getPriorityFamilyForMonth(firstSummerMonth, year, apartement);
-        if (priorityFamily && user.family !== priorityFamily) {
-          return { valid: false, message: `In het voorseizoen (januari-maart) mogen alleen leden van familie ${priorityFamily} de zomermaanden reserveren voor Appartement ${apartement === 'A' ? '35' : '36'}.` };
+        
+        if (firstSummerMonth !== null) {
+          // Converteer 'A'/'B' naar '35'/'36' voor getPriorityFamilyForMonth
+          const apartmentNum = apartement === 'A' ? '35' : (apartement === 'B' ? '36' : apartement);
+          const priorityFamily = getPriorityFamilyForMonth(firstSummerMonth, year, apartmentNum);
+          
+          // Tijdens prioriteitsperiode:
+          // - Familie C kan NIET reserveren
+          // - Familie A en B kunnen alleen reserveren voor hun prioriteitsmaanden
+          if (!user || !user.family) {
+            return { valid: false, message: '' };
+          }
+          
+          // Familie C kan niet reserveren tijdens prioriteitsperiode
+          if (user.family === 'C') {
+            return { valid: false, message: '' };
+          }
+          
+          // Familie A en B kunnen alleen reserveren voor hun prioriteitsmaanden
+          if (priorityFamily) {
+            // Check of gebruiker de prioriteitsfamilie is
+            if (user.family !== priorityFamily) {
+              return { valid: false, message: '' };
+            }
+            
+            // Extra check voor Appartement 35: Familie A en B hebben verschillende maanden
+            // Voor Appartement 36: altijd Familie B
+            if (apartmentNum === '36') {
+              // Appartement 36: alleen Familie B kan reserveren tijdens prioriteitsperiode
+              if (user.family !== 'B') {
+                return { valid: false, message: '' };
+              }
+            }
+          } else {
+            // Geen prioriteitsfamilie gevonden - zou niet moeten gebeuren
+            return { valid: false, message: '' };
+          }
+        } else {
+          // Geen voorkeursmaand gevonden - zou niet moeten gebeuren
+          return { valid: false, message: '' };
+        }
+        
+        // Check maximum duur: 2 weken (14 dagen) in voorkeursmaanden tijdens prioriteitsperiode
+        if (daysInSummerMonths > 14) {
+          return { valid: false, message: `Tijdens de prioriteitsperiode (januari-maart) mag je maximaal 2 weken (14 dagen) boeken in de voorkeursmaanden (juni-september). Je reservering bevat ${daysInSummerMonths} dagen in deze maanden.` };
         }
       }
-      
-      // Check maximum duur: 2 weken (14 dagen) in voorkeursmaanden tijdens prioriteitsperiode
-      if (daysInSummerMonths > 14) {
-        return { valid: false, message: `In het voorseizoen (januari-maart) mag je maximaal 2 weken (14 dagen) boeken in de voorkeursmaanden (juni-september). Je reservering bevat ${daysInSummerMonths} dagen in deze maanden.` };
+      // Vanaf april (maand 3 en later): alles is open, geen checks meer nodig
+    } else if (reservationYear > todayYear) {
+      // Toekomstig jaar: nog niet 1 januari van dat jaar
+      const jan1ReservationYear = new Date(reservationYear, 0, 1);
+      if (today < jan1ReservationYear) {
+        // Nog niet 1 januari van reserveringsjaar - NIEMAND mag reserveren voor voorkeursmaanden
+        // Dit geldt ongeacht of je prioriteitsfamilie bent
+        return { valid: false, message: '' };
+      } else {
+        // We zijn al in het reserveringsjaar (1 januari of later)
+        // Check of we IN de prioriteitsperiode zijn (jan-maart)
+        if (todayMonth >= 0 && todayMonth < 3) {
+          // Tijdens prioriteitsperiode: alleen prioriteitsfamilies kunnen boeken
+          let firstSummerMonth = null;
+          const checkStartDate = new Date(reservationStart);
+          while (checkStartDate < reservationEnd && !firstSummerMonth) {
+            const month = checkStartDate.getMonth();
+            if (month >= 5 && month <= 8) {
+              firstSummerMonth = month;
+              break;
+            }
+            checkStartDate.setDate(checkStartDate.getDate() + 1);
+          }
+          
+          if (firstSummerMonth !== null) {
+            const apartmentNum = apartement === 'A' ? '35' : (apartement === 'B' ? '36' : apartement);
+            const priorityFamily = getPriorityFamilyForMonth(firstSummerMonth, year, apartmentNum);
+            
+            // Tijdens prioriteitsperiode:
+            // - Familie C kan NIET reserveren
+            // - Familie A en B kunnen alleen reserveren voor hun prioriteitsmaanden
+            if (!user || !user.family) {
+              return { valid: false, message: '' };
+            }
+            
+            // Familie C kan niet reserveren tijdens prioriteitsperiode
+            if (user.family === 'C') {
+              return { valid: false, message: '' };
+            }
+            
+            // Familie A en B kunnen alleen reserveren voor hun prioriteitsmaanden
+            if (priorityFamily) {
+              if (user.family !== priorityFamily) {
+                return { valid: false, message: '' };
+              }
+              
+              // Extra check voor Appartement 36: alleen Familie B kan reserveren
+              if (apartmentNum === '36' && user.family !== 'B') {
+                return { valid: false, message: '' };
+              }
+            } else {
+              return { valid: false, message: '' };
+            }
+            
+            // Check maximum duur: 2 weken (14 dagen) in voorkeursmaanden tijdens prioriteitsperiode
+            if (daysInSummerMonths > 14) {
+              return { valid: false, message: `Tijdens de prioriteitsperiode (januari-maart) mag je maximaal 2 weken (14 dagen) boeken in de voorkeursmaanden (juni-september). Je reservering bevat ${daysInSummerMonths} dagen in deze maanden.` };
+            }
+          } else {
+            return { valid: false, message: '' };
+          }
+        }
+        // Na april: alles is open, geen checks meer nodig
       }
     }
   }
@@ -526,6 +635,9 @@ function generateCalendarForApartment(apartment) {
       const apartmentReservations = dateReservations.filter(r => r.appartement === apartment);
       isApproved = apartmentReservations.some(r => r.status === 'goedgekeurd' || r.status === 'betaald');
       
+      // Check if any reservation is pending cancellation
+      const hasPendingCancellation = apartmentReservations.some(r => r.status === 'pending_cancellation');
+      
       // Check if any reservation is provisional
       const hasProvisional = apartmentReservations.some(r => r.isProvisional === true);
       
@@ -533,6 +645,8 @@ function generateCalendarForApartment(apartment) {
         dayDiv.classList.add(`reserved-${apartment}`);
         if (hasProvisional) {
           dayDiv.classList.add('reserved-provisional'); // Lichter dan pending
+        } else if (hasPendingCancellation) {
+          dayDiv.classList.add('reserved-pending'); // Pending cancellation treated as pending
         } else if (isApproved) {
           dayDiv.classList.add('reserved-approved');
         } else {
@@ -548,6 +662,9 @@ function generateCalendarForApartment(apartment) {
       const allDateReservations = dateReservations;
       isApproved = allDateReservations.some(r => r.status === 'goedgekeurd' || r.status === 'betaald');
       
+      // Check if any reservation is pending cancellation
+      const hasPendingCancellation = allDateReservations.some(r => r.status === 'pending_cancellation');
+      
       // Check if any reservation is provisional
       const hasProvisional = allDateReservations.some(r => r.isProvisional === true);
       
@@ -555,6 +672,8 @@ function generateCalendarForApartment(apartment) {
         dayDiv.classList.add('reserved');
         if (hasProvisional) {
           dayDiv.classList.add('reserved-provisional');
+        } else if (hasPendingCancellation) {
+          dayDiv.classList.add('reserved-pending'); // Pending cancellation treated as pending
         } else if (isApproved) {
           dayDiv.classList.add('reserved-approved');
         } else {
@@ -564,6 +683,8 @@ function generateCalendarForApartment(apartment) {
         dayDiv.classList.add('reserved-A');
         if (hasProvisional) {
           dayDiv.classList.add('reserved-provisional');
+        } else if (hasPendingCancellation) {
+          dayDiv.classList.add('reserved-pending'); // Pending cancellation treated as pending
         } else if (isApproved) {
           dayDiv.classList.add('reserved-approved');
         } else {
@@ -573,6 +694,8 @@ function generateCalendarForApartment(apartment) {
         dayDiv.classList.add('reserved-B');
         if (hasProvisional) {
           dayDiv.classList.add('reserved-provisional');
+        } else if (hasPendingCancellation) {
+          dayDiv.classList.add('reserved-pending'); // Pending cancellation treated as pending
         } else if (isApproved) {
           dayDiv.classList.add('reserved-approved');
         } else {
@@ -616,12 +739,94 @@ function generateCalendarForApartment(apartment) {
         const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
         const isAdmin = user && user.role === 'admin';
         
+        // Check of dit een voorkeursmaand is (juni-september = maanden 5-8) die nog niet geboekt mag worden
+        // ALLEEN voorkeursmaanden blokkeren, niet andere maanden!
+        const dateMonth = date.getMonth();
+        const isPreferredMonth = dateMonth >= 5 && dateMonth <= 8; // Juni-september alleen!
+        const dateYear = date.getFullYear();
+        const jan1DateYear = new Date(dateYear, 0, 1);
+        const today = getCurrentDate(); // Gebruik override datum indien ingesteld
+        
+        let isBlockedByPriorityRule = false;
+        // ALLEEN checken als het een voorkeursmaand is!
+        if (isPreferredMonth && !isAdmin) {
+          const todayYear = today.getFullYear();
+          const todayMonth = today.getMonth(); // 0 = januari, 3 = april
+          
+          // Als we kijken naar hetzelfde jaar
+          if (dateYear === todayYear) {
+            // Tijdens prioriteitsperiode (jan-maart = maanden 0-2)
+            if (todayMonth >= 0 && todayMonth < 3) {
+              const apartmentNum = apartment === 'A' ? '35' : (apartment === 'B' ? '36' : apartment);
+              const priorityFamily = getPriorityFamilyForMonth(dateMonth, dateYear, apartmentNum);
+              
+              // Familie C kan niet reserveren tijdens prioriteitsperiode
+              if (!user || !user.family || user.family === 'C') {
+                isBlockedByPriorityRule = true;
+              } else if (priorityFamily) {
+                // Familie A en B kunnen alleen reserveren voor hun prioriteitsmaanden
+                if (user.family !== priorityFamily) {
+                  isBlockedByPriorityRule = true;
+                }
+                
+                // Extra check voor Appartement 36: alleen Familie B kan reserveren
+                if (apartmentNum === '36' && user.family !== 'B') {
+                  isBlockedByPriorityRule = true;
+                }
+              } else {
+                // Geen prioriteitsfamilie - blokkeer
+                isBlockedByPriorityRule = true;
+              }
+            }
+            // Vanaf april (maand 3 en later): niet blokkeren, alles is open
+          } else if (dateYear > todayYear) {
+            // Toekomstig jaar: nog niet 1 januari van dat jaar = NIEMAND kan reserveren
+            const jan1DateYear = new Date(dateYear, 0, 1);
+            if (today < jan1DateYear) {
+              // Nog niet 1 januari van reserveringsjaar - blokkeer voor iedereen
+              isBlockedByPriorityRule = true;
+            } else {
+              // We zijn al in het reserveringsjaar (1 januari of later)
+              // Check of we IN de prioriteitsperiode zijn (jan-maart)
+              if (todayMonth >= 0 && todayMonth < 3) {
+                const apartmentNum = apartment === 'A' ? '35' : (apartment === 'B' ? '36' : apartment);
+                const priorityFamily = getPriorityFamilyForMonth(dateMonth, dateYear, apartmentNum);
+                
+                // Familie C kan niet reserveren tijdens prioriteitsperiode
+                if (!user || !user.family || user.family === 'C') {
+                  isBlockedByPriorityRule = true;
+                } else if (priorityFamily) {
+                  // Familie A en B kunnen alleen reserveren voor hun prioriteitsmaanden
+                  if (user.family !== priorityFamily) {
+                    isBlockedByPriorityRule = true;
+                  }
+                  
+                  // Extra check voor Appartement 36: alleen Familie B kan reserveren
+                  if (apartmentNum === '36' && user.family !== 'B') {
+                    isBlockedByPriorityRule = true;
+                  }
+                } else {
+                  isBlockedByPriorityRule = true;
+                }
+              }
+              // Na april: niet blokkeren, alles is open
+            }
+          }
+        }
+        
         // In hoogseizoen: alleen zaterdagen klikbaar (GELDT VOOR ALLES, inclusief admin)
         if (isInHighSeason && !isSaturday) {
           // Geen clickable class toevoegen - niet klikbaar
           dayDiv.title = 'In juli en augustus kun je alleen vanaf zaterdag boeken';
           dayDiv.style.cursor = 'not-allowed';
           dayDiv.style.opacity = '0.6';
+          // Geen hover events voor niet-klikbare dagen
+        } else if (isBlockedByPriorityRule) {
+          // Geblokkeerd door prioriteitsregel - niet klikbaar
+          dayDiv.title = 'Reserveren nog niet mogelijk';
+          dayDiv.style.cursor = 'not-allowed';
+          dayDiv.style.opacity = '0.6';
+          dayDiv.classList.add('disabled-booking');
           // Geen hover events voor niet-klikbare dagen
         } else {
           // Normaal klikbaar - maar check of dit een geldige selectie is
@@ -752,38 +957,93 @@ function generateCalendarForApartment(apartment) {
    }
    
    // Check overlay voor boekingsbeperkingen
+   // Overlay wordt alleen getoond als de huidige maand (currentMonth) een voorkeursmaand is die geblokkeerd moet worden
    if (apartment) {
      const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
-     const today = new Date();
+     const today = getCurrentDate(); // Gebruik override datum indien ingesteld
      const todayYear = today.getFullYear();
      
      // Admin kan altijd reserveren - geen overlay
      const isAdmin = user && user.role === 'admin';
      
-     // Check alle dagen in de maand voor zomermaanden
+     // Check of de huidige maand (currentMonth) een voorkeursmaand is (juni-september = maanden 5-8)
+     const isCurrentMonthPreferred = currentMonth >= 5 && currentMonth <= 8;
+     
      let shouldShowOverlay = false;
      
-     // Check of huidige maand een zomermaand is
-     if (!isAdmin && user && user.family && currentMonth >= 5 && currentMonth <= 8) {
-       // Check of we al in het jaar zijn dat we willen reserveren
-       if (currentYear > todayYear) {
-         // We kijken naar volgend jaar: pas vanaf 1 januari van het HUIDIGE jaar mag je reserveren
-         // (Dus vanaf 1 januari 2024 mag je reserveren voor zomermaanden van 2025)
-         const jan1CurrentYear = new Date(todayYear, 0, 1);
-         if (today < jan1CurrentYear) {
-           shouldShowOverlay = true;
+     // Overlay alleen voor voorkeursmaanden (juni-september = maanden 5-8)
+     if (isCurrentMonthPreferred && !isAdmin) {
+       const todayMonth = today.getMonth(); // 0 = januari, 3 = april
+       
+       // Als we kijken naar hetzelfde jaar
+       if (currentYear === todayYear) {
+         // Tijdens prioriteitsperiode (jan-maart = maanden 0-2)
+         if (todayMonth >= 0 && todayMonth < 3) {
+           const apartmentNum = apartment === 'A' ? '35' : (apartment === 'B' ? '36' : apartment);
+           const priorityFamily = getPriorityFamilyForMonth(currentMonth, currentYear, apartmentNum);
+           
+           // Familie C kan niet reserveren tijdens prioriteitsperiode
+           if (!user || !user.family || user.family === 'C') {
+             shouldShowOverlay = true;
+           } else if (priorityFamily) {
+             // Toon overlay alleen als gebruiker niet de prioriteitsfamilie is
+             if (user.family !== priorityFamily) {
+               shouldShowOverlay = true;
+             }
+             
+             // Extra check voor Appartement 36: alleen Familie B kan reserveren
+             if (apartmentNum === '36' && user.family !== 'B') {
+               shouldShowOverlay = true;
+             }
+           } else {
+             // Geen prioriteitsfamilie - blokkeer
+             shouldShowOverlay = true;
+           }
          }
-       } else if (currentYear === todayYear) {
-         // We kijken naar huidig jaar: pas vanaf 1 januari van dit jaar mag je reserveren
-         const jan1ThisYear = new Date(todayYear, 0, 1);
-         if (today < jan1ThisYear) {
+         // Vanaf april (maand 3 en later): geen overlay, alles is open
+       } else if (currentYear > todayYear) {
+         // Toekomstig jaar: nog niet 1 januari van dat jaar = NIEMAND kan reserveren
+         const jan1CurrentYear = new Date(currentYear, 0, 1);
+         if (today < jan1CurrentYear) {
+           // Nog niet 1 januari van reserveringsjaar - overlay voor iedereen
            shouldShowOverlay = true;
+         } else {
+           // We zijn al in het reserveringsjaar (1 januari of later)
+           // Check of we IN de prioriteitsperiode zijn (jan-maart)
+           if (todayMonth >= 0 && todayMonth < 3) {
+             const apartmentNum = apartment === 'A' ? '35' : (apartment === 'B' ? '36' : apartment);
+             const priorityFamily = getPriorityFamilyForMonth(currentMonth, currentYear, apartmentNum);
+             
+             // Familie C kan niet reserveren tijdens prioriteitsperiode
+             if (!user || !user.family || user.family === 'C') {
+               shouldShowOverlay = true;
+             } else if (priorityFamily) {
+               // Toon overlay alleen als gebruiker niet de prioriteitsfamilie is
+               if (user.family !== priorityFamily) {
+                 shouldShowOverlay = true;
+               }
+               
+               // Extra check voor Appartement 36: alleen Familie B kan reserveren
+               if (apartmentNum === '36' && user.family !== 'B') {
+                 shouldShowOverlay = true;
+               }
+             } else {
+               shouldShowOverlay = true;
+             }
+           }
+           // Na april: geen overlay, alles is open
          }
        }
      }
      
      if (shouldShowOverlay) {
        calendar.style.position = 'relative';
+       
+       // Verwijder oude overlay als die bestaat
+       const existingOverlay = calendar.querySelector('.booking-overlay');
+       if (existingOverlay) {
+         existingOverlay.remove();
+       }
        
        const overlay = document.createElement('div');
        overlay.className = 'booking-overlay';
@@ -794,6 +1054,12 @@ function generateCalendarForApartment(apartment) {
        overlay.style.height = '100%';
        overlay.innerHTML = '<div class="overlay-text">Reserveren nog niet mogelijk</div>';
        calendar.appendChild(overlay);
+     } else {
+       // Verwijder overlay als deze niet meer nodig is
+       const existingOverlay = calendar.querySelector('.booking-overlay');
+       if (existingOverlay) {
+         existingOverlay.remove();
+       }
      }
    }
  }
@@ -1018,8 +1284,17 @@ function displayReservations(containerId = 'reservationsList') {
       ? '<span class="status-badge paid">€ Betaald</span>'
       : '<span class="status-badge pending">⏳ In afwachting</span>';
     
-    // Only show delete button for admin
-    const deleteButton = userIsAdmin ? `<button class="btn-delete" onclick="handleDeleteReservation('${res.id}')">Verwijderen</button>` : '';
+    // Check if this is user's own reservation
+    const isOwnReservation = user && res.userId === user.id;
+    
+    // Show cancel button for own reservations, delete button for admin
+    let actionButtons = '';
+    if (userIsAdmin) {
+      actionButtons = `<button class="btn-delete" onclick="handleDeleteReservation('${res.id}')">Verwijderen</button>`;
+    } else if (isOwnReservation) {
+      // Own reservation: show cancel button
+      actionButtons = `<button class="btn-secondary" onclick="cancelReservation('${res.id}')">Annuleren</button>`;
+    }
     
     return `
       <div class="reservation-item">
@@ -1035,19 +1310,213 @@ function displayReservations(containerId = 'reservationsList') {
           </div>
         </div>
         <div class="reservation-actions">
-          ${deleteButton}
+          ${actionButtons}
         </div>
       </div>
     `;
   }).join('');
 }
 
-// Reservering verwijderen
+// Reservering verwijderen (alleen admin)
 async function handleDeleteReservation(id) {
-  if (confirm('Weet je zeker dat je deze reservering wilt verwijderen?')) {
+  const confirmMsg = '⚠️ Weet je zeker dat je deze reservering wilt verwijderen?\n\nDit kan niet ongedaan worden gemaakt.';
+  if (confirm(confirmMsg)) {
     await deleteReservation(id);
-    displayReservations();
-    generateCalendar();
+    if (typeof displayReservations === 'function') {
+      displayReservations();
+    }
+    if (typeof displayMyReservations === 'function') {
+      displayMyReservations();
+    }
+    if (typeof generateCalendar === 'function') {
+      generateCalendar();
+    }
+  }
+}
+
+// Toon eigen reserveringen op homepage
+function displayMyReservations() {
+  const section = document.getElementById('myReservationsSection');
+  const list = document.getElementById('myReservationsList');
+  
+  if (!section || !list) return;
+  
+  const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+  
+  if (!user) {
+    section.style.display = 'none';
+    return;
+  }
+  
+  const reservations = getReservations();
+  const myReservations = reservations.filter(res => res.userId === user.id);
+  
+  if (myReservations.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  
+  section.style.display = 'block';
+  
+  // Sorteer op aankomstdatum (oudste eerst)
+  myReservations.sort((a, b) => new Date(a.aankomst) - new Date(b.aankomst));
+  
+  list.innerHTML = myReservations.map(res => {
+    const aankomst = new Date(res.aankomst);
+    const vertrek = new Date(res.vertrek);
+    const today = getCurrentDate();
+    const daysUntilArrival = Math.ceil((aankomst - today) / (1000 * 60 * 60 * 24));
+    const withinTwoWeeks = daysUntilArrival <= 14 && daysUntilArrival >= 0;
+    const canCancel = !withinTwoWeeks || res.status !== 'betaald';
+    
+    const statusBadge = res.status === 'goedgekeurd' 
+      ? '<span class="status-badge approved">✓ Goedgekeurd</span>'
+      : res.status === 'betaald'
+      ? '<span class="status-badge paid">€ Betaald</span>'
+      : res.status === 'pending_cancellation'
+      ? '<span class="status-badge pending" style="background: #ffc107; color: #856404;">⏳ Annulering Aangevraagd</span>'
+      : '<span class="status-badge pending">⏳ In afwachting</span>';
+    
+    let cancelInfo = '';
+    let cancelButton = '';
+    
+    if (res.status === 'pending_cancellation') {
+      cancelInfo = '<p style="color: #856404; font-style: italic; margin-top: 0.5em;">⏳ Annulering aangevraagd - wachtend op beheerder</p>';
+    } else if (withinTwoWeeks && res.status === 'betaald') {
+      cancelInfo = '<p style="color: #dc3545; font-weight: bold; margin-top: 0.5em;">⚠️ Je kunt deze reservering nog annuleren, maar krijg geen geld terug (binnen 2 weken van aankomst)</p>';
+      cancelButton = `<button class="btn-secondary" onclick="cancelReservation('${res.id}')" style="margin-top: 0.5em;">Annuleren</button>`;
+    } else {
+      cancelButton = `<button class="btn-secondary" onclick="cancelReservation('${res.id}')" style="margin-top: 0.5em;">Annuleren</button>`;
+    }
+    
+    return `
+      <div class="reservation-item" style="margin-bottom: 1.5em; padding: 1.5em; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div class="reservation-info">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.8em;">
+            <div>
+              <strong style="font-size: 1.1em;">Appartement ${res.appartement === 'A' || res.appartement === '35' ? '35' : '36'}</strong>
+              <div style="font-size: 0.9em; color: #666; margin-top: 0.3em;">
+                ${aankomst.toLocaleDateString('nl-NL')} - ${vertrek.toLocaleDateString('nl-NL')}
+                ${res.personen ? ` (${res.personen} persoon${res.personen > 1 ? 'en' : ''})` : ''}
+              </div>
+            </div>
+            ${statusBadge}
+          </div>
+          ${res.opmerking ? `<div style="margin: 0.8em 0; color: #666; font-style: italic;">${res.opmerking}</div>` : ''}
+          ${cancelInfo}
+          ${cancelButton}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Reservering annuleren (eigenaar)
+async function cancelReservation(id) {
+  const reservations = getReservations();
+  const reservation = reservations.find(r => r.id === id);
+  
+  if (!reservation) {
+    alert('Reservering niet gevonden');
+    return;
+  }
+  
+  const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+  if (!user || reservation.userId !== user.id) {
+    alert('Je kunt alleen je eigen reserveringen annuleren');
+    return;
+  }
+  
+  // Check of we binnen 2 weken van begindatum zijn
+  const today = getCurrentDate();
+  const arrivalDate = new Date(reservation.aankomst);
+  arrivalDate.setHours(0, 0, 0, 0);
+  const daysUntilArrival = Math.ceil((arrivalDate - today) / (1000 * 60 * 60 * 24));
+  const withinTwoWeeks = daysUntilArrival <= 14 && daysUntilArrival >= 0;
+  
+  // Als nog niet betaald: direct verwijderen
+  if (reservation.status !== 'betaald') {
+    const confirmMsg = withinTwoWeeks 
+      ? '⚠️ Je annuleert binnen 2 weken voor je aankomstdatum.\n\nDit kan niet ongedaan worden gemaakt.\n\nWeet je zeker dat je deze reservering wilt annuleren?'
+      : 'Weet je zeker dat je deze reservering wilt annuleren?';
+      
+    if (confirm(confirmMsg)) {
+      await deleteReservation(id);
+      displayMyReservations();
+      generateCalendar();
+      alert('Reservering geannuleerd en verwijderd.');
+    }
+  } else {
+    // Als al betaald: check 2-weken regel
+    if (withinTwoWeeks) {
+      // Binnen 2 weken: geen geld terug, maar wel verwijderen
+      const confirmMsg = '⚠️ Je annuleert binnen 2 weken voor je aankomstdatum.\n\nVanwege deze korte termijn krijg je GEEN geld terug.\n\nWeet je zeker dat je deze reservering wilt annuleren?';
+      if (confirm(confirmMsg)) {
+        // Direct verwijderen (geen refund)
+        await deleteReservation(id);
+        displayMyReservations();
+        generateCalendar();
+        alert('Reservering geannuleerd en verwijderd. Geen terugbetaling vanwege korte termijn annulering (binnen 2 weken).');
+      }
+    } else {
+      // Meer dan 2 weken: refund mogelijk
+      const confirmMsg = 'Je hebt al betaald voor deze reservering.\n\nAls je annuleert, wordt de beheerder op de hoogte gebracht om het geld terug te geven.\n\nWeet je zeker dat je wilt annuleren?';
+      if (confirm(confirmMsg)) {
+        // Update reservering status naar pending_cancellation
+        const updatedReservation = {
+          ...reservation,
+          status: 'pending_cancellation',
+          cancellationRequested: new Date().toISOString()
+        };
+        
+        // Update in Firebase
+        if (typeof updateReservation === 'function') {
+          await updateReservation(id, updatedReservation);
+        } else {
+          // Fallback: delete and re-add
+          await deleteReservation(id);
+          await addReservation(updatedReservation);
+        }
+        
+        displayMyReservations();
+        generateCalendar();
+        alert('Je reservering is gemarkeerd voor annulering. De beheerder wordt op de hoogte gebracht om het geld terug te geven.');
+      }
+    }
+  }
+}
+
+// Update reservering (helper functie)
+async function updateReservation(id, updates) {
+  if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+    try {
+      await firebaseDB.collection('reservations').doc(id).update(updates);
+      
+      // Update localStorage
+      const reservations = getReservations();
+      const index = reservations.findIndex(r => r.id === id);
+      if (index !== -1) {
+        reservations[index] = { ...reservations[index], ...updates };
+        localStorage.setItem('santantoni_reservations', JSON.stringify(reservations));
+      }
+    } catch (error) {
+      console.error('Firebase fout bij updaten reservering:', error);
+      // Fallback: delete and re-add
+      const reservations = getReservations();
+      const reservation = reservations.find(r => r.id === id);
+      if (reservation) {
+        await deleteReservation(id);
+        await addReservation({ ...reservation, ...updates });
+      }
+    }
+  } else {
+    // Fallback naar localStorage
+    const reservations = getReservations();
+    const index = reservations.findIndex(r => r.id === id);
+    if (index !== -1) {
+      reservations[index] = { ...reservations[index], ...updates };
+      localStorage.setItem('santantoni_reservations', JSON.stringify(reservations));
+    }
   }
 }
 
@@ -1153,9 +1622,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const calendarA = document.getElementById('calendar-A');
   const calendarB = document.getElementById('calendar-B');
   const singleCalendar = document.getElementById('calendar');
-  
+
   if (calendarA || calendarB || singleCalendar) {
     generateCalendar();
+  }
+  
+  // Load eigen reserveringen op homepage
+  if (typeof displayMyReservations === 'function') {
+    setTimeout(() => {
+      displayMyReservations();
+    }, 500);
   }
   
   // Reserveer knoppen event listeners
@@ -1482,23 +1958,19 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     
-    // Check voorseizoen constraint
-    if (user) {
-      const preseasonCheck = checkPreseasonConstraint(aankomst, vertrek, user, apartement);
-      if (!preseasonCheck.valid) {
-        alert(preseasonCheck.message);
-        return;
-      }
+    // Check voorseizoen constraint (altijd checken, ook als geen user)
+    const preseasonCheck = checkPreseasonConstraint(aankomst, vertrek, user, apartement);
+    if (!preseasonCheck.valid) {
+      alert(preseasonCheck.message);
+      return;
     }
     
     // Bereken prijs met kortingen
     const priceInfo = user ? calculatePriceWithDiscounts(apartement, aankomst, vertrek, user) : calculatePrice(apartement, aankomst, vertrek, null);
     
     // Check of deze reservering in prioriteitsperiode is voor voorkeursmaanden
-    const todayDate = new Date();
-    // Check bypass eerst (test modus)
-    const bypassActive = typeof isPriorityPeriodBypassed === 'function' && isPriorityPeriodBypassed();
-    const isPriorityPeriod = !bypassActive && todayDate.getMonth() < 3; // Jan-Mar
+    const todayDate = getCurrentDate(); // Gebruik override datum indien ingesteld
+    const isPriorityPeriod = todayDate.getMonth() < 3; // Jan-Mar
     const isInPreferredMonths = isDateInPreferredMonths(aankomst, vertrek); // Juni-Sept
     
     // Als niet-eigenaar in prioriteitsperiode voor voorkeursmaanden: provisional booking

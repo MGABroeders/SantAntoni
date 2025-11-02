@@ -68,6 +68,14 @@
       </div>
     </div>
     
+    <!-- Eigen Reserveringen -->
+    <section id="myReservationsSection" class="reservations-section" style="margin-top: 3em; display: none;">
+      <h2>Mijn Reserveringen</h2>
+      <div id="myReservationsList" class="reservations-list">
+        <p class="empty-state">Je hebt nog geen reserveringen</p>
+      </div>
+    </section>
+    
     <!-- Foto Galerij op home pagina -->
     <section id="fotos" class="feature-toggle" style="margin-top: 3em;">
       <h2>Foto Galerij</h2>
@@ -160,6 +168,10 @@
               // Herlaad reserveringen lijst
               if (typeof displayReservations === 'function') {
                 displayReservations();
+              }
+              // Herlaad eigen reserveringen
+              if (typeof displayMyReservations === 'function') {
+                displayMyReservations();
               }
             });
           }
