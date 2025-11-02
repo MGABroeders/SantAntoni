@@ -249,10 +249,32 @@ function renderReservations(reservations, container) {
     return;
   }
   
-  // Sort by aankomst date
-  const sortedReservations = reservations.sort((a, b) => new Date(a.aankomst) - new Date(b.aankomst));
+  // Group reservations by year (based on arrival date)
+  const reservationsByYear = {};
+  reservations.forEach(res => {
+    const year = new Date(res.aankomst).getFullYear();
+    if (!reservationsByYear[year]) {
+      reservationsByYear[year] = [];
+    }
+    reservationsByYear[year].push(res);
+  });
   
-  container.innerHTML = sortedReservations.map(res => {
+  // Sort years descending (newest first)
+  const years = Object.keys(reservationsByYear).sort((a, b) => parseInt(b) - parseInt(a));
+  
+  // Build HTML grouped by year
+  let html = '';
+  years.forEach(year => {
+    // Year header
+    html += `<div style="margin: 2em 0 1em 0; padding-bottom: 0.5em; border-bottom: 3px solid #1565c0;">
+      <h3 style="margin: 0; color: #1565c0; font-size: 1.5em;">${year}</h3>
+    </div>`;
+    
+    // Sort reservations within year by aankomst date
+    const yearReservations = reservationsByYear[year].sort((a, b) => new Date(a.aankomst) - new Date(b.aankomst));
+    
+    // Render reservations for this year
+    html += yearReservations.map(res => {
     const aankomst = new Date(res.aankomst).toLocaleDateString('nl-NL');
     const vertrek = new Date(res.vertrek).toLocaleDateString('nl-NL');
     const created = res.created ? new Date(res.created).toLocaleDateString('nl-NL') : 'Onbekend';
@@ -328,7 +350,10 @@ function renderReservations(reservations, container) {
         </div>
       </div>
     `;
-  }).join('');
+    }).join(''); // Close yearReservations.map
+  }); // Close years.forEach
+  
+  container.innerHTML = html;
 }
 
 // Mark reservation as paid
