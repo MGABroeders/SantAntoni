@@ -371,10 +371,6 @@ async function markReservationAsPaid(reservationId) {
   // Update status to 'betaald'
   reservation.status = 'betaald';
   
-  // Set flag to prevent syncReservationsToFirebase from overwriting
-  window.firebaseDirectUpdateInProgress = true;
-  window.lastDirectUpdateTime = Date.now();
-  
   // Update Firebase FIRST (direct update, no batch overwrite)
   if (typeof firebaseDB !== 'undefined' && firebaseDB && reservation.id) {
     try {
@@ -384,14 +380,9 @@ async function markReservationAsPaid(reservationId) {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
       });
       console.log('Reservering status bijgewerkt in Firebase:', reservation.id);
-      
-      // Wait a moment for Firebase to propagate
-      await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (error) {
       console.error('Fout bij updaten reservering status in Firebase:', error);
       alert('Fout bij opslaan in Firebase. Check console voor details.');
-      // Reset flag on error
-      window.firebaseDirectUpdateInProgress = false;
       return; // Stop if Firebase update fails
     }
   }
@@ -399,11 +390,6 @@ async function markReservationAsPaid(reservationId) {
   // Update localStorage AFTER successful Firebase update
   // This way, if page reloads, real-time listener will get correct data from Firebase
   localStorage.setItem('santantoni_reservations', JSON.stringify(reservations));
-  
-  // Reset flag after update is complete
-  setTimeout(() => {
-    window.firebaseDirectUpdateInProgress = false;
-  }, 3000);
   
   // Wait a bit for Firebase to sync, then reload
   setTimeout(() => {
@@ -440,23 +426,14 @@ async function handleDeleteReservation(reservationId) {
     return;
   }
   
-  // Set flag to prevent syncReservationsToFirebase from overwriting
-  window.firebaseDirectUpdateInProgress = true;
-  window.lastDirectUpdateTime = Date.now();
-  
   // Delete from Firebase FIRST (this is the source of truth)
   if (typeof firebaseDB !== 'undefined' && firebaseDB && reservation.id) {
     try {
       await firebaseDB.collection('reservations').doc(reservation.id).delete();
       console.log('Reservering verwijderd uit Firebase:', reservation.id);
-      
-      // Wait a moment for Firebase to propagate
-      await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (error) {
       console.error('Fout bij verwijderen reservering uit Firebase:', error);
       alert('Fout bij verwijderen reservering uit Firebase. Check console voor details.');
-      // Reset flag on error
-      window.firebaseDirectUpdateInProgress = false;
       return; // Stop if Firebase delete fails
     }
   }
@@ -467,11 +444,6 @@ async function handleDeleteReservation(reservationId) {
   
   // Save to localStorage only (don't trigger syncReservationsToFirebase)
   localStorage.setItem('santantoni_reservations', JSON.stringify(filtered));
-  
-  // Reset flag after delete is complete
-  setTimeout(() => {
-    window.firebaseDirectUpdateInProgress = false;
-  }, 3000);
   
   // Wait a bit for Firebase to sync, then reload
   setTimeout(() => {
