@@ -76,8 +76,9 @@ async function removeProefReservations() {
 }
 
 // Flag om te voorkomen dat syncReservationsToFirebase wordt aangeroepen na directe updates
-let firebaseDirectUpdateInProgress = false;
-let lastDirectUpdateTime = 0;
+// Deze moeten globaal zijn zodat alle scripts ze kunnen gebruiken
+window.firebaseDirectUpdateInProgress = window.firebaseDirectUpdateInProgress || false;
+window.lastDirectUpdateTime = window.lastDirectUpdateTime || 0;
 
 // Sla reserveringen op (sync versie)
 function saveReservations(reservations, skipFirebaseSync = false) {
@@ -87,10 +88,11 @@ function saveReservations(reservations, skipFirebaseSync = false) {
   // WARNING: syncReservationsToFirebase verwijdert ALLES en maakt opnieuw aan, wat directe updates kan overschrijven!
   // Gebruik skipFirebaseSync=true als je directe Firestore updates gebruikt
   // Of als er recent een directe update is gedaan (binnen 5 seconden)
-  const timeSinceLastDirectUpdate = Date.now() - lastDirectUpdateTime;
-  if (!skipFirebaseSync && !firebaseDirectUpdateInProgress && timeSinceLastDirectUpdate > 5000 && isFirebaseReady()) {
+  const timeSinceLastDirectUpdate = Date.now() - (window.lastDirectUpdateTime || 0);
+  const isUpdateInProgress = window.firebaseDirectUpdateInProgress || false;
+  if (!skipFirebaseSync && !isUpdateInProgress && timeSinceLastDirectUpdate > 5000 && isFirebaseReady()) {
     syncReservationsToFirebase(reservations).catch(err => console.error('Firebase sync fout:', err));
-  } else if (skipFirebaseSync || firebaseDirectUpdateInProgress || timeSinceLastDirectUpdate <= 5000) {
+  } else if (skipFirebaseSync || isUpdateInProgress || timeSinceLastDirectUpdate <= 5000) {
     console.log('Skipping syncReservationsToFirebase - direct update in progress or recent');
   }
 }

@@ -408,9 +408,7 @@ async function markReservationAsPaid(reservationId) {
   
   // Reset flag after update is complete
   setTimeout(() => {
-    if (typeof firebaseDirectUpdateInProgress !== 'undefined') {
-      firebaseDirectUpdateInProgress = false;
-    }
+    window.firebaseDirectUpdateInProgress = false;
   }, 3000);
   
   // Wait a bit for Firebase to sync, then reload
@@ -449,12 +447,8 @@ async function handleDeleteReservation(reservationId) {
   }
   
   // Set flag to prevent syncReservationsToFirebase from overwriting
-  if (typeof firebaseDB !== 'undefined') {
-    if (typeof firebaseDirectUpdateInProgress !== 'undefined') {
-      firebaseDirectUpdateInProgress = true;
-      lastDirectUpdateTime = Date.now();
-    }
-  }
+  window.firebaseDirectUpdateInProgress = true;
+  window.lastDirectUpdateTime = Date.now();
   
   // Delete from Firebase FIRST (this is the source of truth)
   if (typeof firebaseDB !== 'undefined' && firebaseDB && reservation.id) {
@@ -468,9 +462,7 @@ async function handleDeleteReservation(reservationId) {
       console.error('Fout bij verwijderen reservering uit Firebase:', error);
       alert('Fout bij verwijderen reservering uit Firebase. Check console voor details.');
       // Reset flag on error
-      if (typeof firebaseDirectUpdateInProgress !== 'undefined') {
-        firebaseDirectUpdateInProgress = false;
-      }
+      window.firebaseDirectUpdateInProgress = false;
       return; // Stop if Firebase delete fails
     }
   }
@@ -484,9 +476,7 @@ async function handleDeleteReservation(reservationId) {
   
   // Reset flag after delete is complete
   setTimeout(() => {
-    if (typeof firebaseDirectUpdateInProgress !== 'undefined') {
-      firebaseDirectUpdateInProgress = false;
-    }
+    window.firebaseDirectUpdateInProgress = false;
   }, 3000);
   
   // Wait a bit for Firebase to sync, then reload
