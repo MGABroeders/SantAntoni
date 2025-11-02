@@ -238,6 +238,38 @@ function loadTransactions() {
   }).join('');
 }
 
+// Load reservations for admin
+function loadAdminReservations() {
+  if (!checkAdminAccess()) return;
+  
+  // Use displayReservations with the admin container ID
+  if (typeof displayReservations === 'function') {
+    displayReservations('adminReservationsListContent');
+  } else {
+    // Fallback if displayReservations is not available
+    const container = document.getElementById('adminReservationsListContent');
+    if (!container) return;
+    
+    const reservations = typeof getReservations === 'function' ? getReservations() : [];
+    if (reservations.length === 0) {
+      container.innerHTML = '<div class="empty-state">Nog geen reserveringen</div>';
+    } else {
+      container.innerHTML = reservations.map(res => {
+        const aankomst = new Date(res.aankomst).toLocaleDateString('nl-NL');
+        const vertrek = new Date(res.vertrek).toLocaleDateString('nl-NL');
+        return `
+          <div class="reservation-item">
+            <div class="reservation-info">
+              <strong>${res.naam}</strong>
+              <div class="reservation-dates">${aankomst} - ${vertrek}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+}
+
 // Tab switching
 function initAdminTabs() {
   const tabs = document.querySelectorAll('.admin-tab');
@@ -260,6 +292,8 @@ function initAdminTabs() {
         loadUsers();
       } else if (targetTab === 'transactions') {
         loadTransactions();
+      } else if (targetTab === 'reservations') {
+        loadAdminReservations();
       }
     });
   });
@@ -271,6 +305,12 @@ document.addEventListener('DOMContentLoaded', () => {
   
   initAdminTabs();
   loadUsers();
+  
+  // Load reservations if reservations tab is active
+  const reservationsTab = document.querySelector('.admin-tab[data-tab="reservations"]');
+  if (reservationsTab && reservationsTab.classList.contains('active')) {
+    loadAdminReservations();
+  }
   
   // User settings form
   const settingsForm = document.getElementById('userSettingsForm');

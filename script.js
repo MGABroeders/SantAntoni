@@ -742,8 +742,10 @@ function generateCalendar() {
 }
 
 // Reserveringen lijst weergeven
-function displayReservations() {
-  const container = document.getElementById('reservationsList');
+function displayReservations(containerId = 'reservationsList') {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
   const reservations = getReservations().sort((a, b) => {
     return new Date(a.aankomst) - new Date(b.aankomst);
   });
@@ -947,7 +949,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
   
-  if (document.getElementById('reservationsList')) {
+  // Toon reserveringen lijst alleen voor admin op kalender.html
+  const adminReservationsList = document.getElementById('adminReservationsList');
+  if (adminReservationsList) {
+    const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+    const userIsAdmin = user && typeof isAdmin === 'function' ? isAdmin() : false;
+    
+    if (userIsAdmin) {
+      adminReservationsList.style.display = 'block';
+      if (document.getElementById('reservationsList')) {
+        displayReservations();
+      }
+    } else {
+      adminReservationsList.style.display = 'none';
+    }
+  } else if (document.getElementById('reservationsList')) {
+    // Normale reserveringen lijst (als het niet de admin versie is)
     displayReservations();
   }
   
@@ -1155,6 +1172,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // Ook update prijs na een korte delay om zeker te zijn dat alles geladen is
     setTimeout(() => {
       updatePrice();
+    }, 500);
+    
+    // Update admin reservations visibility after auth load
+    setTimeout(() => {
+      const adminReservationsList = document.getElementById('adminReservationsList');
+      if (adminReservationsList) {
+        const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+        const userIsAdmin = user && typeof isAdmin === 'function' ? isAdmin() : false;
+        
+        if (userIsAdmin) {
+          adminReservationsList.style.display = 'block';
+          if (document.getElementById('reservationsList')) {
+            displayReservations();
+          }
+        } else {
+          adminReservationsList.style.display = 'none';
+        }
+      }
     }, 500);
   }
   

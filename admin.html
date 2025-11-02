@@ -35,6 +35,7 @@
     <!-- Tabs -->
     <div class="admin-tabs">
       <button class="admin-tab active" data-tab="accounts">Accounts</button>
+      <button class="admin-tab" data-tab="reservations">Reserveringen</button>
       <button class="admin-tab" data-tab="transactions">Transacties</button>
       <button class="admin-tab" data-tab="settings">Instellingen</button>
     </div>
@@ -69,6 +70,14 @@
             <div id="familyCUsers" class="family-users-list"></div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Reservations Tab -->
+    <div id="reservationsTab" class="admin-tab-content">
+      <h3>Huidige Reserveringen</h3>
+      <div id="adminReservationsList" class="reservations-list">
+        <div id="adminReservationsListContent"></div>
       </div>
     </div>
 
