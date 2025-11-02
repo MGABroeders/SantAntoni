@@ -470,6 +470,27 @@ body {
     font-weight: bold;
   }
   
+  /* Zaterdagen in hoogseizoen (juni-september) - visuele markering */
+  .calendar-day.high-season-saturday {
+    border: 2px solid #FFA500;
+    background: linear-gradient(135deg, #fff9e6 0%, #fff3cd 100%);
+    font-weight: bold;
+    position: relative;
+  }
+  
+  .calendar-day.high-season-saturday::after {
+    content: '📅';
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    font-size: 0.7em;
+  }
+  
+  .calendar-day.high-season-saturday.clickable:hover {
+    background: linear-gradient(135deg, #ffe6cc 0%, #ffd9b3 100%) !important;
+    border-color: #FF8C00;
+  }
+  
    /* Pending reservations (in afwachting) - lichter grijs */
    .calendar-day.reserved-pending,
    .calendar-day.reserved-A.reserved-pending,
