@@ -76,59 +76,6 @@
       </div>
     </section>
     
-    <!-- Foto Galerij op home pagina - UITGESCHAKELD -->
-    <!--
-    <section id="fotos" class="feature-toggle" style="margin-top: 3em;">
-      <h2>Foto Galerij</h2>
-      <div class="photo-gallery">
-        <div class="gallery-tabs">
-          <button class="gallery-tab active" data-gallery="all">Alle foto's</button>
-          <button class="gallery-tab" data-gallery="A">Appartement 35</button>
-          <button class="gallery-tab" data-gallery="B">Appartement 36</button>
-          <button class="gallery-tab" data-gallery="omgeving">Omgeving</button>
-        </div>
-        <div class="gallery-grid" id="galleryGrid">
-          <!-- Foto's worden hier dynamisch geladen -->
-        </div>
-      </div>
-      
-      <!-- Lightbox voor uitvergrootte foto's -->
-      <div id="lightbox" class="lightbox" onclick="closeLightbox()">
-        <span class="lightbox-close">&times;</span>
-        <img id="lightbox-img" class="lightbox-image" src="" alt="">
-      </div>
-    </section>
-    -->
-    
-    <!-- Familieberichten op home pagina - UITGESCHAKELD -->
-    <!--
-    <section id="berichten" class="feature-toggle" style="margin-top: 3em;">
-      <h2>Familieberichten</h2>
-      <div class="messages-section">
-        <div class="messages-list" id="messagesList">
-          <!-- Berichten worden hier dynamisch geladen -->
-        </div>
-        <div class="new-message-form">
-          <h3>Nieuw bericht plaatsen</h3>
-          <div id="messageLoginPrompt" style="display: none; padding: 1.5em; text-align: center; background: #fff3cd; border-radius: 8px; margin-bottom: 1em;">
-            <p>Je moet ingelogd zijn om berichten te plaatsen.</p>
-            <a href="login.html" class="btn-primary">Inloggen</a>
-          </div>
-          <form id="messageForm" style="display: none;">
-            <div id="messageUserInfo" class="form-group" style="display: none;">
-              <label>Bericht van:</label>
-              <div id="messageCurrentUserInfo" style="padding: 0.5em; background: #e3f2fd; border-radius: 4px;"></div>
-            </div>
-            <div class="form-group">
-              <label for="messageText">Bericht:</label>
-              <textarea id="messageText" rows="4" required placeholder="Deel een update, ervaring of nieuws..."></textarea>
-            </div>
-            <button type="submit" class="btn-primary">Bericht plaatsen</button>
-          </form>
-        </div>
-      </div>
-    </section>
-    -->
   </section>
 
   <footer>
@@ -175,19 +122,6 @@
               // Herlaad eigen reserveringen
               if (typeof displayMyReservations === 'function') {
                 displayMyReservations();
-              }
-            });
-          }
-          
-          // Real-time listener voor berichten
-          if (typeof subscribeToMessages === 'function') {
-            subscribeToMessages((messages) => {
-              console.log('Berichten update ontvangen:', messages.length);
-              // Update localStorage
-              localStorage.setItem('santantoni_messages', JSON.stringify(messages));
-              // Herlaad berichten
-              if (typeof displayMessages === 'function') {
-                displayMessages();
               }
             });
           }
