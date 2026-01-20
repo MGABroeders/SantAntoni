@@ -663,27 +663,11 @@ function generateCalendarForApartment(apartment) {
           // Als we kijken naar hetzelfde jaar
           if (dateYear === todayYear) {
             // Tijdens prioriteitsperiode (jan-maart = maanden 0-2)
+            // IEDEREEN kan nu intenties indienen - geen blokkering meer
+            // Alleen checken of we nog niet in het jaar zijn
             if (todayMonth >= 0 && todayMonth < 3) {
-              const apartmentNum = apartment === 'A' ? '35' : (apartment === 'B' ? '36' : apartment);
-              const priorityFamily = getPriorityFamilyForMonth(dateMonth, dateYear, apartmentNum);
-              
-              // Familie C kan niet reserveren tijdens prioriteitsperiode
-              if (!user || !user.family || user.family === 'C') {
-                isBlockedByPriorityRule = true;
-              } else if (priorityFamily) {
-                // Familie A en B kunnen alleen reserveren voor hun prioriteitsmaanden
-                if (user.family !== priorityFamily) {
-                  isBlockedByPriorityRule = true;
-                }
-                
-                // Extra check voor Appartement 36: alleen Familie B kan reserveren
-                if (apartmentNum === '36' && user.family !== 'B') {
-                  isBlockedByPriorityRule = true;
-                }
-              } else {
-                // Geen prioriteitsfamilie - blokkeer
-                isBlockedByPriorityRule = true;
-              }
+              // Tijdens prioriteitsperiode: iedereen kan intenties indienen
+              // Geen blokkering - isBlockedByPriorityRule blijft false
             }
             // Vanaf april (maand 3 en later): niet blokkeren, alles is open
           } else if (dateYear > todayYear) {
@@ -692,32 +676,8 @@ function generateCalendarForApartment(apartment) {
             if (today < jan1DateYear) {
               // Nog niet 1 januari van reserveringsjaar - blokkeer voor iedereen
               isBlockedByPriorityRule = true;
-            } else {
-              // We zijn al in het reserveringsjaar (1 januari of later)
-              // Check of we IN de prioriteitsperiode zijn (jan-maart)
-              if (todayMonth >= 0 && todayMonth < 3) {
-                const apartmentNum = apartment === 'A' ? '35' : (apartment === 'B' ? '36' : apartment);
-                const priorityFamily = getPriorityFamilyForMonth(dateMonth, dateYear, apartmentNum);
-                
-                // Familie C kan niet reserveren tijdens prioriteitsperiode
-                if (!user || !user.family || user.family === 'C') {
-                  isBlockedByPriorityRule = true;
-                } else if (priorityFamily) {
-                  // Familie A en B kunnen alleen reserveren voor hun prioriteitsmaanden
-                  if (user.family !== priorityFamily) {
-                    isBlockedByPriorityRule = true;
-                  }
-                  
-                  // Extra check voor Appartement 36: alleen Familie B kan reserveren
-                  if (apartmentNum === '36' && user.family !== 'B') {
-                    isBlockedByPriorityRule = true;
-                  }
-                } else {
-                  isBlockedByPriorityRule = true;
-                }
-              }
-              // Na april: niet blokkeren, alles is open
             }
+            // Als we al in het reserveringsjaar zijn, kan iedereen intenties indienen
           }
         }
         
@@ -885,27 +845,11 @@ function generateCalendarForApartment(apartment) {
        // Als we kijken naar hetzelfde jaar
        if (currentYear === todayYear) {
          // Tijdens prioriteitsperiode (jan-maart = maanden 0-2)
+         // IEDEREEN kan nu intenties indienen - geen overlay meer
+         // shouldShowOverlay blijft false
          if (todayMonth >= 0 && todayMonth < 3) {
-           const apartmentNum = apartment === 'A' ? '35' : (apartment === 'B' ? '36' : apartment);
-           const priorityFamily = getPriorityFamilyForMonth(currentMonth, currentYear, apartmentNum);
-           
-           // Familie C kan niet reserveren tijdens prioriteitsperiode
-           if (!user || !user.family || user.family === 'C') {
-             shouldShowOverlay = true;
-           } else if (priorityFamily) {
-             // Toon overlay alleen als gebruiker niet de prioriteitsfamilie is
-             if (user.family !== priorityFamily) {
-               shouldShowOverlay = true;
-             }
-             
-             // Extra check voor Appartement 36: alleen Familie B kan reserveren
-             if (apartmentNum === '36' && user.family !== 'B') {
-               shouldShowOverlay = true;
-             }
-           } else {
-             // Geen prioriteitsfamilie - blokkeer
-             shouldShowOverlay = true;
-           }
+           // Geen overlay - iedereen kan intenties indienen
+           shouldShowOverlay = false;
          }
          // Vanaf april (maand 3 en later): geen overlay, alles is open
        } else if (currentYear > todayYear) {
@@ -918,25 +862,8 @@ function generateCalendarForApartment(apartment) {
            // We zijn al in het reserveringsjaar (1 januari of later)
            // Check of we IN de prioriteitsperiode zijn (jan-maart)
            if (todayMonth >= 0 && todayMonth < 3) {
-             const apartmentNum = apartment === 'A' ? '35' : (apartment === 'B' ? '36' : apartment);
-             const priorityFamily = getPriorityFamilyForMonth(currentMonth, currentYear, apartmentNum);
-             
-             // Familie C kan niet reserveren tijdens prioriteitsperiode
-             if (!user || !user.family || user.family === 'C') {
-               shouldShowOverlay = true;
-             } else if (priorityFamily) {
-               // Toon overlay alleen als gebruiker niet de prioriteitsfamilie is
-               if (user.family !== priorityFamily) {
-                 shouldShowOverlay = true;
-               }
-               
-               // Extra check voor Appartement 36: alleen Familie B kan reserveren
-               if (apartmentNum === '36' && user.family !== 'B') {
-                 shouldShowOverlay = true;
-               }
-             } else {
-               shouldShowOverlay = true;
-             }
+             // IEDEREEN kan nu intenties indienen - geen overlay meer
+             shouldShowOverlay = false;
            }
            // Na april: geen overlay, alles is open
          }
@@ -1198,15 +1125,19 @@ function showIntentionsModal(apartment, startDate, endDate, intentions, onContin
     return 0;
   });
   
-  // Determine if current user has priority
+  // Determine if current user has priority (only based on family, not score)
   const currentUserHasPriority = currentUser && currentUser.family === priorityFamily;
-  const currentUserHasHigherScore = sortedIntentions.length > 0 && currentUserScore > sortedIntentions[0].userScore;
-  const currentUserHasEqualScoreButPriority = sortedIntentions.length > 0 && 
-    currentUserScore === sortedIntentions[0].userScore && 
-    currentUserHasPriority && 
-    !sortedIntentions[0].hasPriority;
+  const isAdmin = currentUser && currentUser.role === 'admin';
+  
+  // Check if any other intention has family priority over current user
+  const hasOtherFamilyPriority = sortedIntentions.some(int => {
+    const isOwnIntention = currentUser && int.userId === currentUser.id;
+    if (isOwnIntention) return false;
+    return int.hasPriority && !currentUserHasPriority;
+  });
   
   const apartmentName = apartment === 'A' || apartment === '35' ? '35' : '36';
+  const priorityFamilyName = priorityFamily === 'A' ? 'Familie A (Pieters-Louasson)' : priorityFamily === 'B' ? 'Familie B (Broeders)' : 'Geen voorrang';
   
   let html = `
     <div id="intentionsModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center;">
@@ -1216,31 +1147,35 @@ function showIntentionsModal(apartment, startDate, endDate, intentions, onContin
           Appartement ${apartmentName}: ${new Date(startDate).toLocaleDateString('nl-NL')} - ${new Date(endDate).toLocaleDateString('nl-NL')}
         </p>
         
-        ${currentUser ? `
-          <div style="padding: 1em; background: ${currentUserHasHigherScore || currentUserHasEqualScoreButPriority ? '#e8f5e9' : '#fff3cd'}; border-left: 4px solid ${currentUserHasHigherScore || currentUserHasEqualScoreButPriority ? '#4caf50' : '#ffc107'}; border-radius: 4px; margin-bottom: 1.5em;">
-            <strong>Jouw intentie:</strong>
-            <div style="margin-top: 0.5em;">
-              Score: <strong style="color: ${currentUserScore > 0 ? '#4caf50' : currentUserScore < 0 ? '#f44336' : '#666'}; font-size: 1.2em;">${currentUserScore}</strong>
-              ${currentUserHasPriority ? ' | <span style="color: #4caf50;">✓ Voorrangsperiode</span>' : ''}
-            </div>
-            ${currentUserHasHigherScore || currentUserHasEqualScoreButPriority ? 
-              '<div style="margin-top: 0.5em; color: #4caf50; font-weight: bold;">✓ Je hebt voorrang op deze periode!</div>' : 
-              '<div style="margin-top: 0.5em; color: #856404;">⚠️ Andere personen hebben mogelijk voorrang</div>'
-            }
+        ${priorityFamily ? `
+          <div style="padding: 1em; background: #e3f2fd; border-left: 4px solid #2196f3; border-radius: 4px; margin-bottom: 1.5em;">
+            <strong>Voorrangsperiode:</strong> ${priorityFamilyName}
           </div>
         ` : ''}
         
-        <h3 style="margin-top: 0;">Andere intenties (${sortedIntentions.length}):</h3>
-        ${sortedIntentions.length === 0 ? '<p style="color: #666;">Nog geen andere intenties voor deze periode.</p>' : ''}
+        ${currentUser ? `
+          <div style="padding: 1em; background: ${currentUserHasPriority ? '#e8f5e9' : '#fff3cd'}; border-left: 4px solid ${currentUserHasPriority ? '#4caf50' : '#ffc107'}; border-radius: 4px; margin-bottom: 1.5em;">
+            <strong>Jouw intentie:</strong>
+            <div style="margin-top: 0.5em;">
+              ${currentUserHasPriority ? 
+                '<span style="color: #4caf50; font-weight: bold;">✓ Dit is jouw voorrangsperiode</span>' : 
+                `<span style="color: #856404; font-weight: bold;">⚠️ Dit is NIET jouw voorrangsperiode. ${priorityFamilyName} heeft voorrang.</span>`
+              }
+              ${isAdmin ? ` <span style="margin-left: 1em; color: #666; font-size: 0.9em;">(Score: ${currentUserScore})</span>` : ''}
+            </div>
+          </div>
+        ` : ''}
+        
+        <h3 style="margin-top: 0;">Andere intenties (${sortedIntentions.filter(int => !currentUser || int.userId !== currentUser.id).length}):</h3>
+        ${sortedIntentions.filter(int => !currentUser || int.userId !== currentUser.id).length === 0 ? '<p style="color: #666;">Nog geen andere intenties voor deze periode.</p>' : ''}
   `;
   
   sortedIntentions.forEach((int, index) => {
     const isOwnIntention = currentUser && int.userId === currentUser.id;
     if (isOwnIntention) return; // Skip own intention, already shown above
     
-    const hasHigherScore = int.userScore > currentUserScore;
-    const hasEqualScoreButPriority = int.userScore === currentUserScore && int.hasPriority && !currentUserHasPriority;
-    const hasPriority = hasHigherScore || hasEqualScoreButPriority;
+    // Only show family priority, not score priority
+    const hasFamilyPriorityOverUser = int.hasPriority && !currentUserHasPriority;
     
     html += `
       <div style="padding: 1em; margin: 0.5em 0; background: ${int.hasPriority ? '#e8f5e9' : '#fff3cd'}; border-left: 4px solid ${int.hasPriority ? '#4caf50' : '#ffc107'}; border-radius: 4px;">
@@ -1249,10 +1184,8 @@ function showIntentionsModal(apartment, startDate, endDate, intentions, onContin
             <strong>${int.createdBy || int.naam}</strong>
             ${int.hasPriority ? ' <span style="color: #4caf50; font-weight: bold;">✓ Voorrangsperiode</span>' : ''}
             ${int.personen ? ` <span style="color: #666;">(${int.personen} persoon${int.personen > 1 ? 'en' : ''})</span>` : ''}
-            <div style="margin-top: 0.5em;">
-              Score: <strong style="color: ${int.userScore > 0 ? '#4caf50' : int.userScore < 0 ? '#f44336' : '#666'}; font-size: 1.1em;">${int.userScore}</strong>
-            </div>
-            ${hasPriority ? '<div style="margin-top: 0.5em; color: #f44336; font-weight: bold;">⚠️ Deze persoon heeft voorrang op jou</div>' : ''}
+            ${isAdmin ? `<div style="margin-top: 0.3em; font-size: 0.9em; color: #666;">Score: <strong>${int.userScore}</strong></div>` : ''}
+            ${hasFamilyPriorityOverUser ? '<div style="margin-top: 0.5em; color: #f44336; font-weight: bold;">⚠️ Deze persoon heeft voorrang op jou (andere familie)</div>' : ''}
             ${int.opmerking ? `<div style="margin-top: 0.5em; color: #666; font-style: italic; font-size: 0.9em;">${int.opmerking}</div>` : ''}
           </div>
         </div>
@@ -1264,7 +1197,7 @@ function showIntentionsModal(apartment, startDate, endDate, intentions, onContin
         <div style="margin-top: 2em; padding-top: 1.5em; border-top: 2px solid #e0e0e0;">
           <p style="color: #666; font-size: 0.9em; margin-bottom: 1em;">
             Tijdens de prioriteitsperiode (januari-maart) kunnen meerdere personen interesse tonen voor dezelfde periode. 
-            Op 1 februari maakt de eigenaar de definitieve keuze op basis van scores en voorrangsperiodes.
+            Op 1 februari maakt de eigenaar de definitieve keuze.
           </p>
           <div style="display: flex; gap: 1em; justify-content: flex-end;">
             <button onclick="closeIntentionsModal()" class="btn-secondary">Annuleren</button>
@@ -2324,22 +2257,26 @@ document.addEventListener('DOMContentLoaded', () => {
       let warningMsg = '⚠️ INTENTIE RESERVERING\n\nJe boekingsperiode valt in de prioriteitsperiode voor voorkeursmaanden.\n';
       warningMsg += 'Dit is een INTENTIE: meerdere personen kunnen interesse tonen voor dezelfde periode.\n\n';
       
-      if (overlappingIntentions.length > 0) {
-        warningMsg += `Er hebben al ${overlappingIntentions.length} andere persoon(en) interesse getoond voor deze periode:\n`;
-        overlappingIntentions.forEach(int => {
-          warningMsg += `- ${int.createdBy} (${int.aankomst} t/m ${int.vertrek})\n`;
+      if (!hasPriority && priorityFamily) {
+        const priorityFamilyName = priorityFamily === 'A' ? 'Familie A (Pieters-Louasson)' : 'Familie B (Broeders)';
+        warningMsg += `⚠️ BELANGRIJK: Dit is NIET jouw voorrangsperiode!\n`;
+        warningMsg += `${priorityFamilyName} heeft voorrang op deze periode.\n\n`;
+        
+        // Check if someone from priority family already has an intention
+        const priorityFamilyIntentions = overlappingIntentions.filter(int => {
+          const intUser = users.find(u => u.id === int.userId || u.email === int.email);
+          const intFamily = intUser ? intUser.family : (int.family || null);
+          return intFamily === priorityFamily;
         });
-        warningMsg += '\n';
-      }
-      
-      if (!hasPriority) {
-        warningMsg += `⚠️ LET OP: Dit is NIET jouw voorrangsperiode. Familie ${priorityFamily || 'met voorrang'} heeft voorrang op deze periode.\n`;
-        warningMsg += 'Op 1 februari maakt de eigenaar de definitieve keuze.\n\n';
-      } else {
+        
+        if (priorityFamilyIntentions.length > 0) {
+          warningMsg += `⚠️ Er heeft al ${priorityFamilyIntentions.length} persoon(en) van ${priorityFamilyName} interesse getoond voor deze periode.\n`;
+          warningMsg += `Zij hebben voorrang op jou.\n\n`;
+        }
+      } else if (hasPriority) {
         warningMsg += `✓ Dit is jouw voorrangsperiode (Familie ${priorityFamily}).\n\n`;
       }
       
-      warningMsg += 'Je intentie wordt zichtbaar voor iedereen in de intentieslijst.\n';
       warningMsg += 'Op 1 februari wordt de definitieve keuze gemaakt door de eigenaar.';
       
       if (!confirm(warningMsg)) {
