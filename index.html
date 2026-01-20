@@ -76,18 +76,6 @@
       </div>
     </section>
     
-    <!-- Intenties voor Voorkeursmaanden -->
-    <section id="intentionsSection" class="reservations-section" style="margin-top: 3em; display: none;">
-      <h2>Intenties voor Voorkeursmaanden (Juni-September)</h2>
-      <p style="margin-bottom: 1em; color: #666;">
-        Tijdens de prioriteitsperiode (januari-maart) kunnen meerdere personen interesse tonen voor dezelfde periode. 
-        Op 1 februari maakt de eigenaar de definitieve keuze.
-      </p>
-      <div id="intentionsList" class="reservations-list">
-        <p class="empty-state">Nog geen intenties ingediend</p>
-      </div>
-    </section>
-    
     <!-- Foto Galerij op home pagina -->
     <section id="fotos" class="feature-toggle" style="margin-top: 3em;">
       <h2>Foto Galerij</h2>
@@ -224,13 +212,6 @@
       
       // Update feature visibility
       updateFeatureVisibility();
-      
-      // Laad intenties
-      if (typeof displayIntentions === 'function') {
-        setTimeout(() => {
-          displayIntentions();
-        }, 1000);
-      }
     });
     
     // Update feature visibility based on settings

@@ -1059,6 +1059,22 @@ function handleDateClick(date, apartment) {
       }
       
       if (!hasBlockedDays) {
+        // Check of deze periode in voorkeursmaanden valt en of er intenties zijn
+        const isInPreferredMonths = isDateInPreferredMonths(formatDate(selection.startDate), formatDate(date));
+        if (isInPreferredMonths) {
+          const overlappingIntentions = getOverlappingIntentions(apartment, selection.startDate, date);
+          if (overlappingIntentions.length > 0) {
+            // Toon modal met intenties
+            showIntentionsModal(apartment, selection.startDate, date, overlappingIntentions, () => {
+              // Callback: gebruiker heeft modal gezien, ga door met selectie
+              selection.endDate = date;
+              generateCalendarForApartment(apartment);
+              updateReserveButton(apartment);
+            });
+            return; // Wacht op modal bevestiging
+          }
+        }
+        
         selection.endDate = date;
         generateCalendarForApartment(apartment);
         updateReserveButton(apartment);
@@ -1115,6 +1131,181 @@ function updateReserveButton(apartment) {
   }
 }
 
+// Get overlapping intentions for a period
+function getOverlappingIntentions(apartment, startDate, endDate) {
+  const reservations = getReservations();
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  return reservations.filter(res => {
+    if (!res.isIntention) return false;
+    if (res.appartement !== apartment) return false;
+    if (res.status === 'approved') return false; // Alleen niet-goedgekeurde intenties
+    
+    const resStart = new Date(res.aankomst);
+    const resEnd = new Date(res.vertrek);
+    
+    // Check overlap
+    return start < resEnd && end > resStart;
+  });
+}
+
+// Show modal with intentions for selected period
+function showIntentionsModal(apartment, startDate, endDate, intentions, onContinue) {
+  const users = typeof getUsers === 'function' ? getUsers() : [];
+  const currentUser = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+  const currentUserScore = currentUser ? (currentUser.score !== undefined && currentUser.score !== null ? currentUser.score : 0) : 0;
+  
+  // Determine priority family for this period
+  const reservationStart = new Date(startDate);
+  const year = reservationStart.getFullYear();
+  let firstSummerMonth = null;
+  const checkStartDate = new Date(reservationStart);
+  while (checkStartDate < new Date(endDate) && !firstSummerMonth) {
+    const month = checkStartDate.getMonth();
+    if (month >= 5 && month <= 8) {
+      firstSummerMonth = month;
+      break;
+    }
+    checkStartDate.setDate(checkStartDate.getDate() + 1);
+  }
+  
+  const apartmentNum = apartment === 'A' ? '35' : (apartment === 'B' ? '36' : apartment);
+  const priorityFamily = firstSummerMonth !== null ? getPriorityFamilyForMonth(firstSummerMonth, year, apartmentNum) : null;
+  
+  // Sort intentions by score (highest first), then by priority family
+  const sortedIntentions = intentions.map(int => {
+    const user = users.find(u => u.id === int.userId || u.email === int.email);
+    const userScore = user ? (user.score !== undefined && user.score !== null ? user.score : 0) : 0;
+    const userFamily = user ? user.family : (int.family || null);
+    const hasPriority = userFamily === priorityFamily;
+    
+    return {
+      ...int,
+      user,
+      userScore,
+      userFamily,
+      hasPriority
+    };
+  }).sort((a, b) => {
+    // First by score (highest first)
+    if (a.userScore !== b.userScore) {
+      return b.userScore - a.userScore;
+    }
+    // Then by priority family
+    if (a.hasPriority && !b.hasPriority) return -1;
+    if (!a.hasPriority && b.hasPriority) return 1;
+    return 0;
+  });
+  
+  // Determine if current user has priority
+  const currentUserHasPriority = currentUser && currentUser.family === priorityFamily;
+  const currentUserHasHigherScore = sortedIntentions.length > 0 && currentUserScore > sortedIntentions[0].userScore;
+  const currentUserHasEqualScoreButPriority = sortedIntentions.length > 0 && 
+    currentUserScore === sortedIntentions[0].userScore && 
+    currentUserHasPriority && 
+    !sortedIntentions[0].hasPriority;
+  
+  const apartmentName = apartment === 'A' || apartment === '35' ? '35' : '36';
+  
+  let html = `
+    <div id="intentionsModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; display: flex; align-items: center; justify-content: center;">
+      <div style="background: white; padding: 2em; border-radius: 8px; max-width: 600px; max-height: 80vh; overflow-y: auto; margin: 1em;">
+        <h2 style="margin-top: 0;">Intenties voor deze periode</h2>
+        <p style="color: #666; margin-bottom: 1.5em;">
+          Appartement ${apartmentName}: ${new Date(startDate).toLocaleDateString('nl-NL')} - ${new Date(endDate).toLocaleDateString('nl-NL')}
+        </p>
+        
+        ${currentUser ? `
+          <div style="padding: 1em; background: ${currentUserHasHigherScore || currentUserHasEqualScoreButPriority ? '#e8f5e9' : '#fff3cd'}; border-left: 4px solid ${currentUserHasHigherScore || currentUserHasEqualScoreButPriority ? '#4caf50' : '#ffc107'}; border-radius: 4px; margin-bottom: 1.5em;">
+            <strong>Jouw intentie:</strong>
+            <div style="margin-top: 0.5em;">
+              Score: <strong style="color: ${currentUserScore > 0 ? '#4caf50' : currentUserScore < 0 ? '#f44336' : '#666'}; font-size: 1.2em;">${currentUserScore}</strong>
+              ${currentUserHasPriority ? ' | <span style="color: #4caf50;">✓ Voorrangsperiode</span>' : ''}
+            </div>
+            ${currentUserHasHigherScore || currentUserHasEqualScoreButPriority ? 
+              '<div style="margin-top: 0.5em; color: #4caf50; font-weight: bold;">✓ Je hebt voorrang op deze periode!</div>' : 
+              '<div style="margin-top: 0.5em; color: #856404;">⚠️ Andere personen hebben mogelijk voorrang</div>'
+            }
+          </div>
+        ` : ''}
+        
+        <h3 style="margin-top: 0;">Andere intenties (${sortedIntentions.length}):</h3>
+        ${sortedIntentions.length === 0 ? '<p style="color: #666;">Nog geen andere intenties voor deze periode.</p>' : ''}
+  `;
+  
+  sortedIntentions.forEach((int, index) => {
+    const isOwnIntention = currentUser && int.userId === currentUser.id;
+    if (isOwnIntention) return; // Skip own intention, already shown above
+    
+    const hasHigherScore = int.userScore > currentUserScore;
+    const hasEqualScoreButPriority = int.userScore === currentUserScore && int.hasPriority && !currentUserHasPriority;
+    const hasPriority = hasHigherScore || hasEqualScoreButPriority;
+    
+    html += `
+      <div style="padding: 1em; margin: 0.5em 0; background: ${int.hasPriority ? '#e8f5e9' : '#fff3cd'}; border-left: 4px solid ${int.hasPriority ? '#4caf50' : '#ffc107'}; border-radius: 4px;">
+        <div style="display: flex; justify-content: space-between; align-items: start;">
+          <div>
+            <strong>${int.createdBy || int.naam}</strong>
+            ${int.hasPriority ? ' <span style="color: #4caf50; font-weight: bold;">✓ Voorrangsperiode</span>' : ''}
+            ${int.personen ? ` <span style="color: #666;">(${int.personen} persoon${int.personen > 1 ? 'en' : ''})</span>` : ''}
+            <div style="margin-top: 0.5em;">
+              Score: <strong style="color: ${int.userScore > 0 ? '#4caf50' : int.userScore < 0 ? '#f44336' : '#666'}; font-size: 1.1em;">${int.userScore}</strong>
+            </div>
+            ${hasPriority ? '<div style="margin-top: 0.5em; color: #f44336; font-weight: bold;">⚠️ Deze persoon heeft voorrang op jou</div>' : ''}
+            ${int.opmerking ? `<div style="margin-top: 0.5em; color: #666; font-style: italic; font-size: 0.9em;">${int.opmerking}</div>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  
+  html += `
+        <div style="margin-top: 2em; padding-top: 1.5em; border-top: 2px solid #e0e0e0;">
+          <p style="color: #666; font-size: 0.9em; margin-bottom: 1em;">
+            Tijdens de prioriteitsperiode (januari-maart) kunnen meerdere personen interesse tonen voor dezelfde periode. 
+            Op 1 februari maakt de eigenaar de definitieve keuze op basis van scores en voorrangsperiodes.
+          </p>
+          <div style="display: flex; gap: 1em; justify-content: flex-end;">
+            <button onclick="closeIntentionsModal()" class="btn-secondary">Annuleren</button>
+            <button onclick="continueWithReservation()" class="btn-primary">Doorgaan met reserveren</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Remove existing modal if any
+  const existingModal = document.getElementById('intentionsModal');
+  if (existingModal) {
+    existingModal.remove();
+  }
+  
+  // Add modal to page
+  document.body.insertAdjacentHTML('beforeend', html);
+  
+  // Store callback
+  window.intentionsModalCallback = onContinue;
+}
+
+// Close intentions modal
+function closeIntentionsModal() {
+  const modal = document.getElementById('intentionsModal');
+  if (modal) {
+    modal.remove();
+  }
+  window.intentionsModalCallback = null;
+}
+
+// Continue with reservation after viewing intentions
+function continueWithReservation() {
+  if (window.intentionsModalCallback) {
+    window.intentionsModalCallback();
+    window.intentionsModalCallback = null;
+  }
+  closeIntentionsModal();
+}
+
 // Handle reserveer klik
 function handleReserveClick(apartment) {
   const selection = selectionState[apartment];
@@ -1122,6 +1313,30 @@ function handleReserveClick(apartment) {
   if (!selection.startDate || !selection.endDate) {
     alert('Selecteer eerst een start- en einddatum');
     return;
+  }
+  
+  // Check if there are intentions for this period
+  const isInPreferredMonths = isDateInPreferredMonths(formatDate(selection.startDate), formatDate(selection.endDate));
+  if (isInPreferredMonths) {
+    const overlappingIntentions = getOverlappingIntentions(apartment, selection.startDate, selection.endDate);
+    if (overlappingIntentions.length > 0) {
+      // Show modal with intentions
+      showIntentionsModal(apartment, selection.startDate, selection.endDate, overlappingIntentions, () => {
+        // Callback: continue with reservation
+        const apartmentName = apartment === 'A' ? '35' : '36';
+        const start = formatDate(selection.startDate);
+        const end = formatDate(selection.endDate);
+        
+        sessionStorage.setItem('pendingReservation', JSON.stringify({
+          appartement: apartmentName,
+          aankomst: start,
+          vertrek: end
+        }));
+        
+        window.location.href = 'kalender.html';
+      });
+      return; // Wait for modal confirmation
+    }
   }
   
   // Redirect naar kalender pagina met pre-filled data
