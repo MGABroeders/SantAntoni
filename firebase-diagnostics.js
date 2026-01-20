@@ -147,10 +147,144 @@ async function testFirebaseConnectionWithUI() {
   }
 }
 
+// Check wat er in Firebase staat vs localStorage
+async function checkFirebaseData() {
+  const outputDiv = document.getElementById('firebaseDiagnostics');
+  const outputPre = document.getElementById('firebaseDiagnosticsOutput');
+  
+  if (outputDiv && outputPre) {
+    outputDiv.style.display = 'block';
+    outputPre.textContent = 'Data wordt gecontroleerd...\n\n';
+  }
+  
+  let output = '';
+  const log = (msg) => {
+    console.log(msg);
+    output += msg + '\n';
+    if (outputPre) {
+      outputPre.textContent = output;
+    }
+  };
+  
+  log('=== Firebase Data Check ===\n');
+  
+  // Check localStorage
+  const localReservations = JSON.parse(localStorage.getItem('santantoni_reservations') || '[]');
+  log(`📦 localStorage: ${localReservations.length} reserveringen`);
+  if (localReservations.length > 0) {
+    log('   Laatste reservering: ' + (localReservations[0].naam || localReservations[0].createdBy || 'Onbekend'));
+    log('   Datum: ' + (localReservations[0].aankomst || 'Onbekend'));
+  }
+  
+  // Check Firebase
+  if (typeof firebaseDB !== 'undefined' && firebaseDB) {
+    try {
+      log('\n🔥 Firebase: Ophalen data...');
+      const snapshot = await firebaseDB.collection('reservations').get();
+      const firebaseReservations = [];
+      snapshot.forEach(doc => {
+        firebaseReservations.push({ id: doc.id, ...doc.data() });
+      });
+      
+      log(`🔥 Firebase: ${firebaseReservations.length} reserveringen gevonden`);
+      
+      if (firebaseReservations.length > 0) {
+        log('   Laatste reservering: ' + (firebaseReservations[0].naam || firebaseReservations[0].createdBy || 'Onbekend'));
+        log('   Datum: ' + (firebaseReservations[0].aankomst || 'Onbekend'));
+      }
+      
+      // Compare
+      log('\n📊 Vergelijking:');
+      if (firebaseReservations.length === localReservations.length) {
+        log('   ✓ Aantal komt overeen');
+      } else {
+        log('   ⚠️ Aantal komt NIET overeen!');
+        log(`   Firebase: ${firebaseReservations.length}, localStorage: ${localReservations.length}`);
+      }
+      
+      // Check if data is synced
+      if (firebaseReservations.length === 0 && localReservations.length > 0) {
+        log('\n   ⚠️ PROBLEEM: Data staat alleen in localStorage, NIET in Firebase!');
+        log('   Dit betekent dat Firebase niet werkt of security rules blokkeren.');
+      } else if (firebaseReservations.length > 0 && localReservations.length === 0) {
+        log('\n   ⚠️ Data staat in Firebase maar niet in localStorage');
+        log('   Klik op "Sync van Firebase" om te synchroniseren');
+      } else if (firebaseReservations.length > 0 && localReservations.length > 0) {
+        log('\n   ✓ Data staat in beide (mogelijk gesynchroniseerd)');
+      }
+      
+    } catch (error) {
+      log('\n   ✗ Firebase fout: ' + error.code + ' - ' + error.message);
+      if (error.code === 'permission-denied') {
+        log('   ⚠️ Je hebt geen toegang. Log eerst in!');
+      }
+    }
+  } else {
+    log('\n   ✗ Firebase DB niet beschikbaar');
+  }
+  
+  log('\n=== Einde Data Check ===');
+  log('\n💡 TIP: Ga naar Firebase Console om te zien wat er staat:');
+  log('   https://console.firebase.google.com/project/familie-sant-antoni/firestore/data');
+}
+
+// Sync data from Firebase to localStorage
+async function syncFromFirebase() {
+  const outputDiv = document.getElementById('firebaseDiagnostics');
+  const outputPre = document.getElementById('firebaseDiagnosticsOutput');
+  
+  if (outputDiv && outputPre) {
+    outputDiv.style.display = 'block';
+    outputPre.textContent = 'Synchroniseren van Firebase...\n\n';
+  }
+  
+  let output = '';
+  const log = (msg) => {
+    console.log(msg);
+    output += msg + '\n';
+    if (outputPre) {
+      outputPre.textContent = output;
+    }
+  };
+  
+  log('=== Sync van Firebase ===\n');
+  
+  if (typeof syncReservationsFromFirebase === 'function') {
+    try {
+      await syncReservationsFromFirebase();
+      log('✓ Reserveringen gesynchroniseerd');
+      
+      // Reload data
+      if (typeof loadTransactions === 'function') {
+        loadTransactions();
+        log('✓ Admin lijst bijgewerkt');
+      }
+      if (typeof displayReservations === 'function') {
+        displayReservations();
+        log('✓ Reserveringen lijst bijgewerkt');
+      }
+      if (typeof generateCalendar === 'function') {
+        generateCalendar();
+        log('✓ Kalender bijgewerkt');
+      }
+      
+      log('\n✓ Synchronisatie voltooid!');
+    } catch (error) {
+      log('✗ Fout bij synchroniseren: ' + error.message);
+    }
+  } else {
+    log('✗ syncReservationsFromFirebase functie niet gevonden');
+  }
+  
+  log('\n=== Einde Sync ===');
+}
+
 // Run diagnostics when called
 if (typeof window !== 'undefined') {
   window.testFirebaseConnection = testFirebaseConnection;
   window.testFirebaseConnectionWithUI = testFirebaseConnectionWithUI;
-  console.log('Firebase diagnostiek beschikbaar. Roep testFirebaseConnection() of testFirebaseConnectionWithUI() aan.');
+  window.checkFirebaseData = checkFirebaseData;
+  window.syncFromFirebase = syncFromFirebase;
+  console.log('Firebase diagnostiek beschikbaar. Roep testFirebaseConnection(), checkFirebaseData() of syncFromFirebase() aan.');
 }
 
