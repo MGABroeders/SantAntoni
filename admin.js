@@ -737,6 +737,82 @@ function isFeatureEnabled(feature) {
 }
 
 // Tab switching
+// Homepage bericht functies
+function loadHomepageMessage() {
+  const message = getHomepageMessage();
+  const textarea = document.getElementById('homepageMessageText');
+  if (textarea) {
+    textarea.value = message ? message.text : '';
+  }
+}
+
+function saveHomepageMessage() {
+  const textarea = document.getElementById('homepageMessageText');
+  const statusDiv = document.getElementById('homepageMessageStatus');
+  
+  if (!textarea) return;
+  
+  const text = textarea.value.trim();
+  
+  if (text) {
+    const user = getCurrentUser();
+    const message = {
+      text: text,
+      updated: new Date().toISOString(),
+      updatedBy: user ? user.id : null
+    };
+    
+    // Save directly (avoiding function name conflict)
+    localStorage.setItem('santantoni_homepage_message', JSON.stringify(message));
+    
+    // Sync naar Firebase als beschikbaar
+    if (typeof isFirebaseReady === 'function' && isFirebaseReady() && typeof firebaseDB !== 'undefined') {
+      firebaseDB.collection('settings').doc('homepage_message').set({
+        text: message.text,
+        updated: message.updated,
+        updatedBy: message.updatedBy
+      }).catch(err => console.error('Firebase sync fout:', err));
+    }
+    
+    if (statusDiv) {
+      statusDiv.style.display = 'block';
+      statusDiv.style.color = '#4caf50';
+      statusDiv.textContent = '✓ Homepage bericht opgeslagen!';
+      setTimeout(() => {
+        statusDiv.style.display = 'none';
+      }, 3000);
+    }
+  } else {
+    clearHomepageMessage();
+  }
+}
+
+function clearHomepageMessage() {
+  const textarea = document.getElementById('homepageMessageText');
+  const statusDiv = document.getElementById('homepageMessageStatus');
+  
+  if (textarea) {
+    textarea.value = '';
+  }
+  
+  // Remove from localStorage
+  localStorage.removeItem('santantoni_homepage_message');
+  
+  // Remove from Firebase
+  if (typeof isFirebaseReady === 'function' && isFirebaseReady() && typeof firebaseDB !== 'undefined') {
+    firebaseDB.collection('settings').doc('homepage_message').delete().catch(err => console.error('Firebase delete fout:', err));
+  }
+  
+  if (statusDiv) {
+    statusDiv.style.display = 'block';
+    statusDiv.style.color = '#4caf50';
+    statusDiv.textContent = '✓ Homepage bericht verwijderd!';
+    setTimeout(() => {
+      statusDiv.style.display = 'none';
+    }, 3000);
+  }
+}
+
 function initAdminTabs() {
   const tabs = document.querySelectorAll('.admin-tab');
   const contents = document.querySelectorAll('.admin-tab-content');
@@ -751,6 +827,8 @@ function initAdminTabs() {
       loadTransactions();
     } else if (initialTab === 'intentions') {
       loadIntentions();
+    } else if (initialTab === 'settings') {
+      loadHomepageMessage();
     }
   }
   
@@ -779,6 +857,8 @@ function initAdminTabs() {
         loadTransactions();
       } else if (targetTab === 'intentions') {
         loadIntentions();
+      } else if (targetTab === 'settings') {
+        loadHomepageMessage();
       }
     });
   });

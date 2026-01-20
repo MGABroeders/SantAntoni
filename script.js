@@ -474,7 +474,15 @@ function formatDate(date) {
 function generateCalendarForApartment(apartment) {
   const calendarId = apartment ? `calendar-${apartment}` : 'calendar';
   const calendar = document.getElementById(calendarId);
-  if (!calendar) return; // Als kalender niet bestaat, skip
+  if (!calendar) return;
+  
+  // Verberg reserveringsdetails bij regeneratie (tenzij specifiek behouden)
+  if (apartment) {
+    const detailsDiv = document.getElementById(`reservationDetails-${apartment}`);
+    if (detailsDiv) {
+      detailsDiv.style.display = 'none';
+    }
+  } // Als kalender niet bestaat, skip
   
   const reservations = getReservations();
   
@@ -494,6 +502,15 @@ function generateCalendarForApartment(apartment) {
     header.textContent = day;
     calendar.appendChild(header);
   });
+  
+  // Sla huidige maand/jaar op in global state voor highlight functie
+  if (!window.calendarState) {
+    window.calendarState = {};
+  }
+  window.calendarState[apartment || 'single'] = {
+    year: currentYear,
+    month: currentMonth
+  };
   
   // Eerste dag van de maand
   const firstDay = new Date(currentYear, currentMonth, 1);
@@ -805,19 +822,23 @@ function generateCalendarForApartment(apartment) {
        dayDiv.setAttribute('title', `${res.naam}`);
        dayDiv.classList.add('has-reservation');
        
-       // Click handler voor reserverings details
-       if (!apartment) { // Alleen op single calendar pagina
-         dayDiv.style.cursor = 'pointer';
-         dayDiv.addEventListener('click', (e) => {
-           e.preventDefault();
-           alert(`Al geboekt door ${res.naam}\n\n` +
-                 `Van: ${formatDisplayDate(resStart)}\n` +
-                 `Tot: ${formatDisplayDate(resEnd)}\n` +
-                 `Aantal personen: ${res.personen}\n` +
-                 `Appartement: ${res.appartement}\n` +
-                 `Status: ${res.status === 'goedgekeurd' ? 'Goedgekeurd' : res.status === 'in_afwachting' ? 'In afwachting' : 'Betaald'}`);
-         });
-       }
+      // Click handler voor reserverings details
+      dayDiv.style.cursor = 'pointer';
+      dayDiv.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Als er een selectie actief is, gebruik die logica
+        const selection = selectionState[apartment || 'A'];
+        if (selection && (selection.startDate || selection.endDate)) {
+          // Er is een selectie actief, gebruik normale selectie logica
+          handleDateClick(date, apartment);
+          return;
+        }
+        
+        // Toon reserveringsdetails
+        showReservationDetails(res, apartment || res.appartement);
+      });
      }
      
      calendar.appendChild(dayDiv);

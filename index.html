@@ -30,12 +30,9 @@
   </header>
 
   <section id="home">
-    <div class="welcome-section">
-      <h2>Welkom bij Appartementen Sant Antoni</h2>
-      <p class="intro-text">
-        Deze website is ons centrale punt voor het beheren en boeken van onze twee familieappartementen 
-        in Sant Antoni. Hier kun je de beschikbaarheid bekijken en reserveringen maken.
-      </p>
+    <!-- Homepage Bericht (van admin) -->
+    <div id="homepageMessage" class="homepage-message" style="display: none; margin-bottom: 2em;">
+      <div class="homepage-message-content"></div>
     </div>
     
     <!-- Kalender op home pagina -->
@@ -55,6 +52,11 @@
             <input type="date" class="date-input" data-apartment="A" data-role="end" placeholder="Einddatum">
             <button class="btn-reserve" data-apartment="A">Reserveren</button>
           </div>
+          <!-- Reserverings Details -->
+          <div id="reservationDetails-A" class="reservation-details" style="display: none; margin-top: 1.5em; padding: 1.5em; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <h4 style="margin-top: 0; color: #1565c0;">Reserveringsdetails</h4>
+            <div id="reservationDetailsContent-A"></div>
+          </div>
         </div>
         <div class="calendar-wrapper">
           <h3 class="calendar-apartment-title">Appartement 36</h3>
@@ -63,6 +65,11 @@
             <input type="date" class="date-input" data-apartment="B" data-role="start" placeholder="Startdatum">
             <input type="date" class="date-input" data-apartment="B" data-role="end" placeholder="Einddatum">
             <button class="btn-reserve" data-apartment="B">Reserveren</button>
+          </div>
+          <!-- Reserverings Details -->
+          <div id="reservationDetails-B" class="reservation-details" style="display: none; margin-top: 1.5em; padding: 1.5em; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <h4 style="margin-top: 0; color: #1565c0;">Reserveringsdetails</h4>
+            <div id="reservationDetailsContent-B"></div>
           </div>
         </div>
       </div>
@@ -180,6 +187,23 @@
         };
       }
       
+    }
+    
+    // Display homepage message
+    function displayHomepageMessage(message) {
+      const messageDiv = document.getElementById('homepageMessage');
+      const contentDiv = document.querySelector('#homepageMessage .homepage-message-content');
+      
+      if (!messageDiv || !contentDiv) return;
+      
+      if (message && message.text && message.text.trim()) {
+        // Format text with line breaks
+        const formattedText = message.text.replace(/\n/g, '<br>');
+        contentDiv.innerHTML = formattedText;
+        messageDiv.style.display = 'block';
+      } else {
+        messageDiv.style.display = 'none';
+      }
     }
     
   </script>

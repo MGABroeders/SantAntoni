@@ -293,6 +293,100 @@ function subscribeToReservations(callback) {
 }
 
 
+// ==================== HOMEPAGE BERICHT ====================
+
+// Haal homepage bericht op
+function getHomepageMessage() {
+  const data = localStorage.getItem('santantoni_homepage_message');
+  return data ? JSON.parse(data) : null;
+}
+
+// Sla homepage bericht op
+function saveHomepageMessage(message) {
+  if (message && message.text && message.text.trim()) {
+    localStorage.setItem('santantoni_homepage_message', JSON.stringify(message));
+  } else {
+    localStorage.removeItem('santantoni_homepage_message');
+  }
+  
+  // Sync naar Firebase als beschikbaar
+  if (isFirebaseReady()) {
+    syncHomepageMessageToFirebase(message).catch(err => console.error('Firebase sync fout:', err));
+  }
+}
+
+// Sync homepage bericht naar Firebase
+async function syncHomepageMessageToFirebase(message) {
+  try {
+    if (message && message.text && message.text.trim()) {
+      await firebaseDB.collection('settings').doc('homepage_message').set({
+        text: message.text,
+        updated: new Date().toISOString(),
+        updatedBy: message.updatedBy || null
+      });
+    } else {
+      // Verwijder bericht als het leeg is
+      await firebaseDB.collection('settings').doc('homepage_message').delete();
+    }
+  } catch (error) {
+    console.error('Firebase sync fout voor homepage bericht:', error);
+  }
+}
+
+// Haal homepage bericht op van Firebase
+async function syncHomepageMessageFromFirebase() {
+  if (!isFirebaseReady()) return;
+  
+  try {
+    const doc = await firebaseDB.collection('settings').doc('homepage_message').get();
+    if (doc.exists) {
+      const data = doc.data();
+      const message = {
+        text: data.text,
+        updated: data.updated,
+        updatedBy: data.updatedBy
+      };
+      localStorage.setItem('santantoni_homepage_message', JSON.stringify(message));
+    } else {
+      localStorage.removeItem('santantoni_homepage_message');
+    }
+  } catch (error) {
+    console.error('Firebase ophalen fout voor homepage bericht:', error);
+  }
+}
+
+// Real-time listener voor homepage bericht
+function subscribeToHomepageMessage(callback) {
+  if (useLocalStorage()) {
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'santantoni_homepage_message') {
+        const message = e.newValue ? JSON.parse(e.newValue) : null;
+        callback(message);
+      }
+    });
+    return () => {};
+  }
+  
+  return firebaseDB.collection('settings').doc('homepage_message')
+    .onSnapshot((doc) => {
+      if (doc.exists) {
+        const data = doc.data();
+        const message = {
+          text: data.text,
+          updated: data.updated,
+          updatedBy: data.updatedBy
+        };
+        localStorage.setItem('santantoni_homepage_message', JSON.stringify(message));
+        callback(message);
+      } else {
+        localStorage.removeItem('santantoni_homepage_message');
+        callback(null);
+      }
+    }, (error) => {
+      console.error('Firebase snapshot fout:', error);
+    });
+}
+
 // ==================== GEBRUIKERS ====================
 
 function getUsers() {

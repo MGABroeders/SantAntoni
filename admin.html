@@ -120,6 +120,20 @@
         </p>
       </div>
       
+      <!-- Homepage Bericht -->
+      <div class="admin-section">
+        <h4>Homepage Bericht</h4>
+        <p>Plaats een bericht dat verschijnt aan het begin van de homepage. Laat leeg om te verwijderen.</p>
+        <div class="form-group">
+          <label for="homepageMessageText">Bericht:</label>
+          <textarea id="homepageMessageText" rows="5" class="form-control" placeholder="Typ hier je bericht voor de homepage..."></textarea>
+          <span class="help-text">Dit bericht verschijnt bovenaan de homepage voor alle gebruikers.</span>
+        </div>
+        <button onclick="saveHomepageMessage()" class="btn-primary">Bericht Opslaan</button>
+        <button onclick="clearHomepageMessage()" class="btn-secondary" style="margin-left: 0.5em;">Bericht Verwijderen</button>
+        <div id="homepageMessageStatus" style="margin-top: 1em; font-weight: bold; display: none;"></div>
+      </div>
+      
       <!-- Prioriteits periode -->
       <div class="admin-section">
         <h4>Prioriteits Periode</h4>
