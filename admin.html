@@ -102,6 +102,7 @@
           <button onclick="testFirebaseConnectionWithUI()" class="btn-primary">Test Verbinding</button>
           <button onclick="checkFirebaseData()" class="btn-primary">Check Data</button>
           <button onclick="syncFromFirebase()" class="btn-secondary">Sync van Firebase</button>
+          <button onclick="syncAllToFirebase()" class="btn-primary" style="background: #ff9800;">Sync ALL naar Firebase</button>
         </div>
         <div id="firebaseDiagnostics" style="margin-top: 1em; padding: 1em; background: #f5f5f5; border-radius: 8px; display: none;">
           <pre id="firebaseDiagnosticsOutput" style="white-space: pre-wrap; font-family: monospace; font-size: 0.9em;"></pre>
@@ -109,6 +110,10 @@
         <p style="margin-top: 1em; font-size: 0.9em; color: #666;">
           💡 <strong>Tip:</strong> Als je op je mobiel hebt gereserveerd maar het niet ziet op je PC, klik op "Check Data" om te zien of de data in Firebase staat. 
           Klik daarna op "Sync van Firebase" om de data te synchroniseren.
+        </p>
+        <p style="margin-top: 0.5em; font-size: 0.9em; color: #ff9800;">
+          ⚠️ <strong>Belangrijk:</strong> Als er geen data in Firebase staat, klik op "Sync ALL naar Firebase" om alle localStorage data naar Firebase te synchroniseren. 
+          Dit is een eenmalige actie om bestaande data te migreren.
         </p>
         <p style="margin-top: 0.5em; font-size: 0.9em; color: #666;">
           🔗 <a href="https://console.firebase.google.com/project/familie-sant-antoni/firestore/data" target="_blank">Open Firebase Console</a> om direct te zien wat er in Firebase staat.

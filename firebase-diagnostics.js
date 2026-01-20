@@ -279,12 +279,93 @@ async function syncFromFirebase() {
   log('\n=== Einde Sync ===');
 }
 
+// Sync ALL localStorage data naar Firebase (eenmalig)
+async function syncAllToFirebase() {
+  const outputDiv = document.getElementById('firebaseDiagnostics');
+  const outputPre = document.getElementById('firebaseDiagnosticsOutput');
+  
+  if (outputDiv && outputPre) {
+    outputDiv.style.display = 'block';
+    outputPre.textContent = 'Alle data wordt gesynchroniseerd naar Firebase...\n\n';
+  }
+  
+  let output = '';
+  const log = (msg) => {
+    console.log(msg);
+    output += msg + '\n';
+    if (outputPre) {
+      outputPre.textContent = output;
+    }
+  };
+  
+  log('=== Sync ALL naar Firebase ===\n');
+  
+  if (!isFirebaseReady() || !firebaseDB) {
+    log('✗ Firebase is niet klaar');
+    return;
+  }
+  
+  // Get all reservations from localStorage
+  const localReservations = JSON.parse(localStorage.getItem('santantoni_reservations') || '[]');
+  log(`📦 Gevonden in localStorage: ${localReservations.length} reserveringen`);
+  
+  if (localReservations.length === 0) {
+    log('⚠️ Geen data om te syncen');
+    return;
+  }
+  
+  // Filter test reservations
+  const realReservations = localReservations.filter(res => {
+    if (!res) return false;
+    if (res.id && res.id.toString().startsWith('proef')) return false;
+    if (res.email && res.email.includes('example.com')) return false;
+    return true;
+  });
+  
+  log(`✓ Na filteren: ${realReservations.length} echte reserveringen`);
+  
+  // Sync to Firebase
+  try {
+    log('\n🔥 Synchroniseren naar Firebase...');
+    
+    const batch = firebaseDB.batch();
+    let count = 0;
+    
+    realReservations.forEach(res => {
+      if (!res.id) {
+        res.id = Date.now().toString() + '_' + count;
+      }
+      const docRef = firebaseDB.collection('reservations').doc(res.id);
+      const { id, ...data } = res;
+      batch.set(docRef, data);
+      count++;
+    });
+    
+    await batch.commit();
+    log(`✓ ${count} reserveringen succesvol gesynchroniseerd naar Firebase!`);
+    log('\n✓ Synchronisatie voltooid!');
+    log('   Herlaad de pagina of klik op "Check Data" om te verifiëren.');
+    
+  } catch (error) {
+    log('\n✗ Fout bij synchroniseren: ' + error.code + ' - ' + error.message);
+    if (error.code === 'permission-denied') {
+      log('\n⚠️ OPLOSSING:');
+      log('1. Log eerst in op de website');
+      log('2. Of pas de security rules aan in Firebase Console');
+      log('3. Zie FIRESTORE_SECURITY_RULES.md voor instructies');
+    }
+  }
+  
+  log('\n=== Einde Sync ===');
+}
+
 // Run diagnostics when called
 if (typeof window !== 'undefined') {
   window.testFirebaseConnection = testFirebaseConnection;
   window.testFirebaseConnectionWithUI = testFirebaseConnectionWithUI;
   window.checkFirebaseData = checkFirebaseData;
   window.syncFromFirebase = syncFromFirebase;
-  console.log('Firebase diagnostiek beschikbaar. Roep testFirebaseConnection(), checkFirebaseData() of syncFromFirebase() aan.');
+  window.syncAllToFirebase = syncAllToFirebase;
+  console.log('Firebase diagnostiek beschikbaar. Roep testFirebaseConnection(), checkFirebaseData(), syncFromFirebase() of syncAllToFirebase() aan.');
 }
 
