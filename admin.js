@@ -674,7 +674,8 @@ function initDateOverride() {
   }
 }
 
-// Toggle feature (photos or messages)
+// Toggle feature (photos or messages) - UITGESCHAKELD
+/*
 function toggleFeature(feature) {
   // Default to true if not set
   const storedValue = localStorage.getItem(`feature_${feature}_enabled`);
@@ -720,12 +721,15 @@ function updateFeatureUI(feature) {
     }
   }
 }
+*/
 
-// Initialize feature toggles on page load
+// Initialize feature toggles on page load - UITGESCHAKELD
+/*
 function initFeatureToggles() {
   updateFeatureUI('photos');
   updateFeatureUI('messages');
 }
+*/
 
 // Check if feature is enabled (global function for use in other files)
 function isFeatureEnabled(feature) {
@@ -754,7 +758,7 @@ function initAdminTabs() {
   initDateOverride();
   
   // Load feature toggles
-  initFeatureToggles();
+  // initFeatureToggles(); // UITGESCHAKELD
   
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
