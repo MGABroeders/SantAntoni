@@ -214,22 +214,45 @@ async function addReservation(reservation) {
 
 // Verwijder reservering (sync versie)
 async function deleteReservation(id) {
+  if (!id) {
+    console.error('deleteReservation: Geen ID opgegeven');
+    return;
+  }
+  
   // Delete from Firebase first (source of truth)
   if (isFirebaseReady() && firebaseDB) {
     try {
-      await firebaseDB.collection('reservations').doc(id).delete();
-      console.log('Reservering verwijderd uit Firebase:', id);
+      // Check if document exists first
+      const docRef = firebaseDB.collection('reservations').doc(id);
+      const doc = await docRef.get();
+      
+      if (!doc.exists) {
+        console.warn('Reservering bestaat niet in Firebase:', id);
+        // Continue to delete from localStorage anyway
+      } else {
+        await docRef.delete();
+        console.log('Reservering verwijderd uit Firebase:', id);
+      }
     } catch (error) {
       console.error('Fout bij verwijderen reservering uit Firebase:', error);
+      console.error('Error details:', {
+        code: error.code,
+        message: error.message,
+        reservationId: id,
+        firebaseReady: isFirebaseReady(),
+        firebaseDB: typeof firebaseDB !== 'undefined'
+      });
+      
+      // Don't throw - continue with localStorage delete as fallback
       // Fallback to old method if Firebase fails
       const reservations = getReservations();
       const filtered = reservations.filter(r => r.id !== id);
-      saveReservations(filtered);
+      saveReservations(filtered, true); // Skip Firebase sync to avoid loop
       return;
     }
   }
   
-  // Update localStorage after successful Firebase delete
+  // Update localStorage after successful Firebase delete (or if Firebase not ready)
   const reservations = getReservations();
   const filtered = reservations.filter(r => r.id !== id);
   localStorage.setItem('santantoni_reservations', JSON.stringify(filtered));

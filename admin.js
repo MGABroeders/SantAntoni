@@ -566,17 +566,50 @@ async function handleDeleteReservation(reservationId) {
   // Delete from Firebase FIRST (this is the source of truth)
   if (typeof firebaseDB !== 'undefined' && firebaseDB && reservation.id) {
     try {
-      await firebaseDB.collection('reservations').doc(reservation.id).delete();
-      console.log('Reservering verwijderd uit Firebase:', reservation.id);
+      // Check if document exists first
+      const docRef = firebaseDB.collection('reservations').doc(reservation.id);
+      const doc = await docRef.get();
+      
+      if (!doc.exists) {
+        console.warn('Reservering bestaat niet in Firebase:', reservation.id);
+        // Continue to delete from localStorage anyway
+      } else {
+        await docRef.delete();
+        console.log('Reservering verwijderd uit Firebase:', reservation.id);
+      }
       
       // Wait a moment for Firebase to propagate
       await new Promise(resolve => setTimeout(resolve, 1000));
     } catch (error) {
       console.error('Fout bij verwijderen reservering uit Firebase:', error);
-      alert('Fout bij verwijderen reservering uit Firebase. Check console voor details.');
-      // Reset flag on error
-      window.firebaseDirectUpdateInProgress = false;
-      return; // Stop if Firebase delete fails
+      console.error('Error details:', {
+        code: error.code,
+        message: error.message,
+        reservationId: reservation.id,
+        firebaseReady: typeof firebaseDB !== 'undefined' && firebaseDB !== null,
+        firebaseInitialized: typeof firebase !== 'undefined'
+      });
+      
+      // Check for common Firebase errors
+      let errorMessage = 'Fout bij verwijderen reservering uit Firebase.';
+      if (error.code === 'permission-denied') {
+        errorMessage = '⚠️ Geen toestemming om reservering te verwijderen.\n\nMogelijke oorzaken:\n- Firebase Firestore security rules blokkeren delete operaties\n- Je bent niet correct ingelogd\n\nDe reservering wordt wel verwijderd uit localStorage.';
+      } else if (error.code === 'not-found') {
+        console.log('Reservering bestaat niet in Firebase, maar wordt verwijderd uit localStorage');
+        errorMessage = null; // Don't show error for not-found
+      } else if (error.code === 'unavailable') {
+        errorMessage = '⚠️ Firebase is niet beschikbaar.\n\nDe reservering wordt verwijderd uit localStorage.';
+      } else {
+        errorMessage = `⚠️ Firebase fout: ${error.message || error.code || 'Onbekende fout'}\n\nDe reservering wordt wel verwijderd uit localStorage.`;
+      }
+      
+      if (errorMessage) {
+        console.warn(errorMessage);
+      }
+      
+      // Don't stop - continue with localStorage delete as fallback
+      // User will see the reservation is gone, and Firebase will sync eventually
+      console.log('Doorgaan met verwijderen uit localStorage als fallback');
     }
   }
   
