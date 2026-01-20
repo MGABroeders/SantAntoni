@@ -24,8 +24,8 @@
     <nav id="mainNav" class="main-nav">
       <a href="index.html">Home</a>
       <a href="kalender.html">Reserveren</a>
-      <a href="fotos.html" id="navPhotos" class="feature-toggle">Foto's</a>
-      <a href="berichten.html" id="navMessages" class="feature-toggle">Berichten</a>
+      <!-- <a href="fotos.html" id="navPhotos" class="feature-toggle">Foto's</a> -->
+      <!-- <a href="berichten.html" id="navMessages" class="feature-toggle">Berichten</a> -->
     </nav>
   </header>
 
@@ -34,8 +34,7 @@
       <h2>Welkom bij Appartementen Sant Antoni</h2>
       <p class="intro-text">
         Deze website is ons centrale punt voor het beheren en boeken van onze twee familieappartementen 
-        in Sant Antoni. Hier kun je de beschikbaarheid bekijken, reserveringen maken, foto's bekijken 
-        en familieberichten delen.
+        in Sant Antoni. Hier kun je de beschikbaarheid bekijken en reserveringen maken.
       </p>
     </div>
     
@@ -77,7 +76,8 @@
       </div>
     </section>
     
-    <!-- Foto Galerij op home pagina -->
+    <!-- Foto Galerij op home pagina - UITGESCHAKELD -->
+    <!--
     <section id="fotos" class="feature-toggle" style="margin-top: 3em;">
       <h2>Foto Galerij</h2>
       <div class="photo-gallery">
@@ -98,8 +98,10 @@
         <img id="lightbox-img" class="lightbox-image" src="" alt="">
       </div>
     </section>
+    -->
     
-    <!-- Familieberichten op home pagina -->
+    <!-- Familieberichten op home pagina - UITGESCHAKELD -->
+    <!--
     <section id="berichten" class="feature-toggle" style="margin-top: 3em;">
       <h2>Familieberichten</h2>
       <div class="messages-section">
@@ -126,6 +128,7 @@
         </div>
       </div>
     </section>
+    -->
   </section>
 
   <footer>
@@ -259,7 +262,8 @@
         };
       }
       
-      // Photos feature
+      // Photos feature - UITGESCHAKELD
+      /*
       const photosEnabled = isFeatureEnabled('photos');
       const navPhotos = document.getElementById('navPhotos');
       const sectionPhotos = document.getElementById('fotos');
@@ -270,8 +274,10 @@
       if (sectionPhotos) {
         sectionPhotos.style.display = photosEnabled ? '' : 'none';
       }
+      */
       
-      // Messages feature
+      // Messages feature - UITGESCHAKELD
+      /*
       const messagesEnabled = isFeatureEnabled('messages');
       const navMessages = document.getElementById('navMessages');
       const sectionMessages = document.getElementById('berichten');
@@ -282,9 +288,11 @@
       if (sectionMessages) {
         sectionMessages.style.display = messagesEnabled ? '' : 'none';
       }
+      */
     }
     
-    // Display photos on homepage
+    // Display photos on homepage - UITGESCHAKELD
+    /*
     function displayHomePhotos(photos) {
       const grid = document.getElementById('galleryGrid');
       if (!grid) return;
@@ -330,6 +338,7 @@
         }
       }
     }
+    */
   </script>
 </body>
 </html>
