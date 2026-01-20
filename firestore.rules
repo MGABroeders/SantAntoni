@@ -7,21 +7,11 @@ service cloud.firestore {
       allow read, write: if true;  // Iedereen kan reserveringen lezen en schrijven
     }
     
-    // Berichten: iedereen kan lezen en schrijven
-    match /messages/{messageId} {
-      allow read, write: if true;  // Iedereen kan berichten lezen en schrijven
-    }
-    
     // Gebruikers: alleen lezen voor ingelogde gebruikers, alleen admin kan schrijven
     match /users/{userId} {
       allow read: if request.auth != null;  // Alleen ingelogde gebruikers kunnen gebruikers lezen
       allow create, update, delete: if request.auth != null && 
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';  // Alleen admin kan gebruikers bewerken
-    }
-    
-    // Foto's: iedereen kan lezen en schrijven
-    match /photos/{photoId} {
-      allow read, write: if true;  // Iedereen kan foto's bekijken en uploaden
     }
     
     // Transacties: alleen admin kan lezen/schrijven

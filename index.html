@@ -139,12 +139,10 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
   
   <!-- Firebase Config & Data Layer -->
   <script src="firebase-config.js"></script>
   <script src="firebase-db.js"></script>
-  <script src="firebase-storage.js"></script>
   <script src="firebase-diagnostics.js"></script>
   
   <!-- App Scripts -->
@@ -194,20 +192,6 @@
             });
           }
           
-          // Load photos from Firebase
-          if (typeof getPhotos === 'function') {
-            getPhotos().then(photos => {
-              displayHomePhotos(photos);
-            });
-          }
-          
-          // Subscribe to photos
-          if (typeof subscribeToPhotos === 'function') {
-            subscribeToPhotos((photos) => {
-              console.log('Foto\'s update ontvangen:', photos.length);
-              displayHomePhotos(photos);
-            });
-          }
         }, 2000);
       }
       
@@ -262,83 +246,8 @@
         };
       }
       
-      // Photos feature - UITGESCHAKELD
-      /*
-      const photosEnabled = isFeatureEnabled('photos');
-      const navPhotos = document.getElementById('navPhotos');
-      const sectionPhotos = document.getElementById('fotos');
-      
-      if (navPhotos) {
-        navPhotos.style.display = photosEnabled ? '' : 'none';
-      }
-      if (sectionPhotos) {
-        sectionPhotos.style.display = photosEnabled ? '' : 'none';
-      }
-      */
-      
-      // Messages feature - UITGESCHAKELD
-      /*
-      const messagesEnabled = isFeatureEnabled('messages');
-      const navMessages = document.getElementById('navMessages');
-      const sectionMessages = document.getElementById('berichten');
-      
-      if (navMessages) {
-        navMessages.style.display = messagesEnabled ? '' : 'none';
-      }
-      if (sectionMessages) {
-        sectionMessages.style.display = messagesEnabled ? '' : 'none';
-      }
-      */
     }
     
-    // Display photos on homepage - UITGESCHAKELD
-    /*
-    function displayHomePhotos(photos) {
-      const grid = document.getElementById('galleryGrid');
-      if (!grid) return;
-      
-      if (photos.length === 0) {
-        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 2em; color: #999;">Nog geen foto\'s geüpload</div>';
-        return;
-      }
-      
-      const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
-      const isAdmin = typeof isAdminUser === 'function' ? isAdminUser() : false;
-      
-      grid.innerHTML = photos.map(photo => {
-        const canDelete = isAdmin || (user && (photo.uploadedById === user.id || photo.uploadedByEmail === user.email));
-        const deleteButton = canDelete 
-          ? `<button class="btn-delete" onclick="handleDeletePhoto('${photo.id}', '${photo.url}')">×</button>`
-          : '';
-        
-        return `
-          <div class="gallery-item" data-category="${photo.category || 'all'}">
-            ${deleteButton}
-            <img src="${photo.url}" alt="${photo.description || 'Foto'}" onclick="openLightbox('${photo.url}', '${photo.description || ''}')">
-          </div>
-        `;
-      }).join('');
-      
-      // Re-init gallery tabs
-      if (typeof initGallery === 'function') {
-        initGallery();
-      }
-    }
-    
-    // Handle photo deletion (homepage)
-    async function handleDeletePhoto(photoId, photoUrl) {
-      if (confirm('Weet je zeker dat je deze foto wilt verwijderen?')) {
-        if (typeof deletePhoto === 'function') {
-          const success = await deletePhoto(photoId, photoUrl);
-          if (success) {
-            // Photos will auto-update via real-time listener
-          }
-        } else {
-          alert('Verwijder functie niet beschikbaar');
-        }
-      }
-    }
-    */
   </script>
 </body>
 </html>
