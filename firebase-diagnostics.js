@@ -124,12 +124,27 @@ async function testFirebaseConnectionWithUI() {
     try {
       const currentUser = firebaseAuth.currentUser;
       log('\n7. Authenticatie: ' + (currentUser ? '✓ Ingelogd als ' + currentUser.email : '✗ Niet ingelogd'));
+      
+      if (!currentUser) {
+        log('\n   ⚠️ BELANGRIJK: Je bent niet ingelogd!');
+        log('   Firebase vereist authenticatie voor read/write operaties.');
+        log('   Log eerst in via de login pagina voordat je Firebase test.');
+        log('   Ga naar: login.html of klik op "Inloggen" in de navigatie.');
+      }
     } catch (error) {
       log('   ✗ Auth check faalt: ' + error);
     }
   }
   
   log('\n=== Einde Diagnostiek ===');
+  
+  if (!firebaseAuth || !firebaseAuth.currentUser) {
+    log('\n📋 VOLGENDE STAPPEN:');
+    log('1. Log eerst in op de website (login.html)');
+    log('2. Ga naar Firebase Console en stel Security Rules in');
+    log('3. Zie FIRESTORE_SECURITY_RULES.md voor instructies');
+    log('4. Test opnieuw na inloggen');
+  }
 }
 
 // Run diagnostics when called
