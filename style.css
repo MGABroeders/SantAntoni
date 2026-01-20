@@ -492,10 +492,10 @@ body {
   }
   
    /* Provisional reservations (niet-eigenaar in prioriteitsperiode) - lichtste grijs */
-   .calendar-day.reserved-provisional,
-   .calendar-day.reserved-A.reserved-provisional,
-   .calendar-day.reserved-B.reserved-provisional,
-   .calendar-day.reserved.reserved-provisional {
+  .calendar-day.reserved-intention,
+  .calendar-day.reserved-A.reserved-intention,
+  .calendar-day.reserved-B.reserved-intention,
+  .calendar-day.reserved.reserved-intention {
      background: repeating-linear-gradient(
        45deg,
        #fafafa,

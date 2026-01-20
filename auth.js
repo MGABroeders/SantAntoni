@@ -132,6 +132,7 @@ function register(name, email, password) {
     approved: false, // Moet goedgekeurd worden door admin
     family: null, // 'A' of 'B' - wordt ingesteld door admin
     rank: null, // 'eigenaar' of 'niet-eigenaar' - wordt ingesteld door admin
+    score: 0, // Punten systeem: start op 0, -1 bij eerste keuze, +1 bij geen eerste keuze
     settings: {
       canBook: false, // Standaard geen boekingsrechten tot goedgekeurd
       maxReservationsPerYear: 5,

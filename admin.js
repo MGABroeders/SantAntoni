@@ -69,6 +69,7 @@ function loadUsers() {
 
 // Create draggable user item HTML
 function createDraggableUserItem(user) {
+  const score = user.score !== undefined && user.score !== null ? user.score : 0;
   return `
     <div class="family-user-item" draggable="true" ondragstart="dragUser(event)" data-user-id="${user.id}">
       <div class="family-user-info">
@@ -81,6 +82,13 @@ function createDraggableUserItem(user) {
         Rang: ${user.rank || 'Geen'} | 
         Boekingsrechten: ${user.settings?.canBook ? '✅' : '❌'} | 
         Max/jaar: ${user.settings?.maxReservationsPerYear || 5}
+      </div>
+      <div class="family-user-details" style="margin-top: 0.5em; padding: 0.5em; background: #e3f2fd; border-radius: 4px;">
+        <strong>Score:</strong> <span style="font-size: 1.2em; font-weight: bold; color: ${score > 0 ? '#4caf50' : score < 0 ? '#f44336' : '#666'};">${score}</span>
+        <div style="margin-top: 0.3em; display: flex; gap: 0.3em;">
+          <button class="btn-secondary" style="padding: 0.2em 0.5em; font-size: 0.85em;" onclick="event.stopPropagation(); adjustUserScore('${user.id}', -1)">-1</button>
+          <button class="btn-secondary" style="padding: 0.2em 0.5em; font-size: 0.85em;" onclick="event.stopPropagation(); adjustUserScore('${user.id}', 1)">+1</button>
+        </div>
       </div>
       <button class="btn-secondary" style="margin-top: 0.5em; width: 100%;" onclick="event.stopPropagation(); editUserSettings('${user.id}')">Instellingen</button>
     </div>
@@ -147,6 +155,38 @@ function deleteUserById(userId) {
     deleteUser(userId);
     loadUsers();
   }
+}
+
+// Adjust user score (admin only)
+function adjustUserScore(userId, change) {
+  if (!checkAdminAccess()) return;
+  
+  const users = getUsers();
+  const user = users.find(u => u.id === userId);
+  if (!user) {
+    alert('Gebruiker niet gevonden');
+    return;
+  }
+  
+  // Initialize score if not exists
+  if (user.score === undefined || user.score === null) {
+    user.score = 0;
+  }
+  
+  // Adjust score
+  user.score += change;
+  
+  // Update current user if it's the same user
+  const currentUser = getCurrentUser();
+  if (currentUser && currentUser.id === userId) {
+    setCurrentUser(user);
+  }
+  
+  saveUsers(users);
+  loadUsers();
+  
+  const action = change > 0 ? 'verhoogd' : 'verlaagd';
+  alert(`Score ${action} naar ${user.score}`);
 }
 
 // Edit user settings
@@ -672,6 +712,8 @@ function initAdminTabs() {
       loadUsers();
     } else if (initialTab === 'transactions') {
       loadTransactions();
+    } else if (initialTab === 'intentions') {
+      loadIntentions();
     }
   }
   
@@ -698,9 +740,343 @@ function initAdminTabs() {
         loadUsers();
       } else if (targetTab === 'transactions') {
         loadTransactions();
+      } else if (targetTab === 'intentions') {
+        loadIntentions();
       }
     });
   });
+}
+
+// Load intentions for admin
+function loadIntentions() {
+  if (!checkAdminAccess()) return;
+  
+  const container = document.getElementById('intentionsList');
+  if (!container) {
+    console.error('intentionsList container not found');
+    return;
+  }
+  
+  // Show loading state
+  container.innerHTML = '<p class="empty-state">Intenties laden...</p>';
+  
+  // Get reservations - try async first, fallback to sync
+  let reservations = [];
+  if (typeof getReservationsAsync === 'function') {
+    getReservationsAsync().then(res => {
+      reservations = res || [];
+      renderIntentions(reservations, container);
+    }).catch(err => {
+      console.error('Error loading reservations async:', err);
+      reservations = typeof getReservations === 'function' ? getReservations() : [];
+      renderIntentions(reservations, container);
+    });
+  } else {
+    reservations = typeof getReservations === 'function' ? getReservations() : [];
+    renderIntentions(reservations, container);
+  }
+}
+
+// Render intentions grouped by apartment and period
+function renderIntentions(reservations, container) {
+  if (!container) return;
+  
+  const users = typeof getUsers === 'function' ? getUsers() : [];
+  const intentions = reservations.filter(res => res.isIntention && res.status !== 'approved');
+  
+  if (intentions.length === 0) {
+    container.innerHTML = '<p class="empty-state">Geen intenties om te beheren</p>';
+    return;
+  }
+  
+  // Group intentions by apartment and period
+  const groupedIntentions = {};
+  
+  intentions.forEach(int => {
+    const key = `${int.appartement}_${int.aankomst}_${int.vertrek}`;
+    if (!groupedIntentions[key]) {
+      groupedIntentions[key] = {
+        appartement: int.appartement,
+        aankomst: int.aankomst,
+        vertrek: int.vertrek,
+        intentions: []
+      };
+    }
+    groupedIntentions[key].intentions.push(int);
+  });
+  
+  // Determine priority family for each group
+  const groups = Object.values(groupedIntentions).map(group => {
+    const reservationStart = new Date(group.aankomst);
+    const year = reservationStart.getFullYear();
+    let firstSummerMonth = null;
+    const checkStartDate = new Date(reservationStart);
+    while (checkStartDate < new Date(group.vertrek) && !firstSummerMonth) {
+      const month = checkStartDate.getMonth();
+      if (month >= 5 && month <= 8) {
+        firstSummerMonth = month;
+        break;
+      }
+      checkStartDate.setDate(checkStartDate.getDate() + 1);
+    }
+    
+    const apartmentNum = group.appartement === 'A' ? '35' : (group.appartement === 'B' ? '36' : group.appartement);
+    const priorityFamily = firstSummerMonth !== null ? getPriorityFamilyForMonth(firstSummerMonth, year, apartmentNum) : null;
+    
+    // Sort intentions: priority family first
+    group.intentions.sort((a, b) => {
+      const aUser = users.find(u => u.id === a.userId || u.email === a.email);
+      const bUser = users.find(u => u.id === b.userId || u.email === b.email);
+      const aFamily = aUser ? aUser.family : (a.family || null);
+      const bFamily = bUser ? bUser.family : (b.family || null);
+      
+      if (aFamily === priorityFamily && bFamily !== priorityFamily) return -1;
+      if (aFamily !== priorityFamily && bFamily === priorityFamily) return 1;
+      return 0;
+    });
+    
+    return {
+      ...group,
+      priorityFamily,
+      priorityFamilyName: priorityFamily === 'A' ? 'Familie A (Pieters-Louasson)' : priorityFamily === 'B' ? 'Familie B (Broeders)' : 'Geen voorrang'
+    };
+  });
+  
+  // Sort groups by apartment and date
+  groups.sort((a, b) => {
+    if (a.appartement !== b.appartement) {
+      return a.appartement.localeCompare(b.appartement);
+    }
+    return new Date(a.aankomst) - new Date(b.aankomst);
+  });
+  
+  let html = '';
+  
+  groups.forEach(group => {
+    const aankomst = new Date(group.aankomst);
+    const vertrek = new Date(group.vertrek);
+    const apartmentName = group.appartement === 'A' || group.appartement === '35' ? '35' : '36';
+    
+    const intentionsHtml = group.intentions.map(int => {
+      const user = users.find(u => u.id === int.userId || u.email === int.email);
+      const intFamily = user ? user.family : (int.family || null);
+      const hasPriority = intFamily === group.priorityFamily;
+      const userScore = user ? (user.score !== undefined && user.score !== null ? user.score : 0) : 0;
+      
+      // Calculate price
+      let price = int.prijs;
+      if (!price || price === 0) {
+        const family = intFamily || 'C';
+        const apartement = int.appartement === '35' || int.appartement === 'A' ? 'A' : (int.appartement === '36' || int.appartement === 'B' ? 'B' : int.appartement);
+        
+        if (typeof calculatePriceWithDiscounts === 'function' && user) {
+          const priceInfo = calculatePriceWithDiscounts(apartement, int.aankomst, int.vertrek, user);
+          price = priceInfo.total;
+        } else if (typeof calculatePrice === 'function') {
+          const priceInfo = calculatePrice(apartement, int.aankomst, int.vertrek, user || null);
+          price = priceInfo.total;
+        }
+      }
+      
+      return `
+        <div class="intention-item" style="padding: 1em; margin: 0.5em 0; background: ${hasPriority ? '#e8f5e9' : '#fff3cd'}; border-left: 4px solid ${hasPriority ? '#4caf50' : '#ffc107'}; border-radius: 4px;">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5em;">
+            <div>
+              <strong>${int.createdBy || int.naam}</strong>
+              ${hasPriority ? '<span style="margin-left: 0.5em; color: #4caf50; font-weight: bold;">✓ Voorrang</span>' : ''}
+              ${int.personen ? ` <span style="color: #666;">(${int.personen} persoon${int.personen > 1 ? 'en' : ''})</span>` : ''}
+              <div style="margin-top: 0.3em; font-size: 0.9em;">
+                <strong>Score:</strong> <span style="font-weight: bold; color: ${userScore > 0 ? '#4caf50' : userScore < 0 ? '#f44336' : '#666'}; font-size: 1.1em;">${userScore}</span>
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-weight: bold; color: #1565c0;">€${price ? price.toFixed(2) : '0.00'}</div>
+            </div>
+          </div>
+          ${int.opmerking ? `<div style="margin-top: 0.5em; color: #666; font-style: italic; font-size: 0.9em;">${int.opmerking}</div>` : ''}
+          <div style="margin-top: 0.5em;">
+            <button class="btn-primary" onclick="confirmIntention('${int.id}')" style="margin-right: 0.5em;">
+              ✓ Bevestigen
+            </button>
+            <button class="btn-secondary" onclick="rejectIntention('${int.id}')">
+              ✗ Afwijzen
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    html += `
+      <div class="intention-group" style="margin-bottom: 2em; padding: 1.5em; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div style="margin-bottom: 1em; padding-bottom: 1em; border-bottom: 2px solid #e0e0e0;">
+          <h3 style="margin: 0 0 0.5em 0;">Appartement ${apartmentName}</h3>
+          <div style="color: #666;">
+            ${aankomst.toLocaleDateString('nl-NL')} - ${vertrek.toLocaleDateString('nl-NL')}
+          </div>
+          <div style="margin-top: 0.5em; font-weight: bold; color: #1976d2;">
+            Voorrangsperiode: ${group.priorityFamilyName}
+          </div>
+        </div>
+        <div>
+          <strong style="display: block; margin-bottom: 0.5em;">Intenties (${group.intentions.length}):</strong>
+          ${intentionsHtml}
+        </div>
+      </div>
+    `;
+  });
+  
+  container.innerHTML = html;
+}
+
+// Confirm an intention (approve it and delete overlapping intentions)
+async function confirmIntention(intentionId) {
+  if (!checkAdminAccess()) return;
+  
+  const reservations = typeof getReservations === 'function' ? getReservations() : [];
+  const intention = reservations.find(r => r.id === intentionId);
+  
+  if (!intention) {
+    alert('Intentie niet gevonden');
+    return;
+  }
+  
+  // Find overlapping intentions
+  const overlappingIntentions = reservations.filter(res => {
+    if (res.id === intentionId) return false; // Not the one we're confirming
+    if (!res.isIntention) return false; // Only other intentions
+    if (res.appartement !== intention.appartement) return false;
+    
+    const resStart = new Date(res.aankomst);
+    const resEnd = new Date(res.vertrek);
+    const intStart = new Date(intention.aankomst);
+    const intEnd = new Date(intention.vertrek);
+    
+    return intStart < resEnd && intEnd > resStart;
+  });
+  
+  let confirmMsg = `⚠️ Weet je zeker dat je deze intentie wilt bevestigen?\n\n`;
+  confirmMsg += `Intentie: ${intention.createdBy || intention.naam}\n`;
+  confirmMsg += `Periode: ${new Date(intention.aankomst).toLocaleDateString('nl-NL')} - ${new Date(intention.vertrek).toLocaleDateString('nl-NL')}\n\n`;
+  
+  if (overlappingIntentions.length > 0) {
+    confirmMsg += `De volgende ${overlappingIntentions.length} andere intentie(s) worden verwijderd:\n`;
+    overlappingIntentions.forEach(int => {
+      confirmMsg += `- ${int.createdBy || int.naam}\n`;
+    });
+    confirmMsg += '\n';
+  }
+  
+  confirmMsg += 'Deze intentie wordt een definitieve reservering.';
+  
+  if (!confirm(confirmMsg)) {
+    return;
+  }
+  
+  // Set flag to prevent syncReservationsToFirebase from overwriting
+  window.firebaseDirectUpdateInProgress = true;
+  window.lastDirectUpdateTime = Date.now();
+  
+  try {
+    // Get users to update scores
+    const users = typeof getUsers === 'function' ? getUsers() : [];
+    
+    // Find user for confirmed intention
+    const confirmedUser = users.find(u => u.id === intention.userId || u.email === intention.email);
+    if (confirmedUser) {
+      // User gets first choice: -1 score
+      if (confirmedUser.score === undefined || confirmedUser.score === null) {
+        confirmedUser.score = 0;
+      }
+      confirmedUser.score -= 1;
+      console.log(`Score aangepast voor ${confirmedUser.name}: ${confirmedUser.score + 1} -> ${confirmedUser.score} (bevestigd)`);
+    }
+    
+    // Find users for rejected overlapping intentions
+    overlappingIntentions.forEach(overlapping => {
+      const rejectedUser = users.find(u => u.id === overlapping.userId || u.email === overlapping.email);
+      if (rejectedUser) {
+        // User didn't get first choice: +1 score
+        if (rejectedUser.score === undefined || rejectedUser.score === null) {
+          rejectedUser.score = 0;
+        }
+        rejectedUser.score += 1;
+        console.log(`Score aangepast voor ${rejectedUser.name}: ${rejectedUser.score - 1} -> ${rejectedUser.score} (afgewezen)`);
+      }
+    });
+    
+    // Save updated users
+    if (typeof saveUsers === 'function') {
+      saveUsers(users);
+    }
+    
+    // Update intention to approved status and remove isIntention flag
+    if (typeof firebaseDB !== 'undefined' && firebaseDB && intention.id) {
+      await firebaseDB.collection('reservations').doc(intention.id).update({
+        status: 'approved',
+        isIntention: false,
+        confirmedAt: new Date().toISOString()
+      });
+      
+      // Delete overlapping intentions from Firebase
+      for (const overlapping of overlappingIntentions) {
+        await firebaseDB.collection('reservations').doc(overlapping.id).delete();
+      }
+    }
+    
+    // Update local storage
+    const updatedReservations = reservations.map(r => {
+      if (r.id === intentionId) {
+        return { ...r, status: 'approved', isIntention: false, confirmedAt: new Date().toISOString() };
+      }
+      return r;
+    }).filter(r => !overlappingIntentions.find(o => o.id === r.id));
+    
+    localStorage.setItem('santantoni_reservations', JSON.stringify(updatedReservations));
+    
+    // Reset flag
+    setTimeout(() => {
+      window.firebaseDirectUpdateInProgress = false;
+    }, 3000);
+    
+    // Reload
+    setTimeout(() => {
+      loadIntentions();
+      if (typeof loadTransactions === 'function') {
+        loadTransactions();
+      }
+      if (typeof generateCalendar === 'function') {
+        generateCalendar();
+      }
+      if (typeof displayIntentions === 'function') {
+        displayIntentions();
+      }
+    }, 500);
+    
+    alert('Intentie bevestigd en andere overlappende intenties verwijderd.');
+  } catch (error) {
+    console.error('Fout bij bevestigen intentie:', error);
+    alert('Fout bij bevestigen intentie. Check console voor details.');
+    window.firebaseDirectUpdateInProgress = false;
+  }
+}
+
+// Reject an intention (delete it)
+async function rejectIntention(intentionId) {
+  if (!checkAdminAccess()) return;
+  
+  const confirmMsg = '⚠️ Weet je zeker dat je deze intentie wilt afwijzen?\n\nDe intentie wordt verwijderd.';
+  if (!confirm(confirmMsg)) {
+    return;
+  }
+  
+  await handleDeleteReservation(intentionId);
+  
+  // Reload intentions
+  setTimeout(() => {
+    loadIntentions();
+  }, 500);
+  
+  alert('Intentie afgewezen en verwijderd.');
 }
 
 // Initialize

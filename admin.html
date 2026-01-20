@@ -36,6 +36,7 @@
     <div class="admin-tabs">
       <button class="admin-tab active" data-tab="accounts">Accounts</button>
       <button class="admin-tab" data-tab="transactions">Reserveringen & Transacties</button>
+      <button class="admin-tab" data-tab="intentions">Intenties Beheer</button>
       <button class="admin-tab" data-tab="settings">Instellingen</button>
     </div>
 
@@ -76,6 +77,16 @@
     <div id="transactionsTab" class="admin-tab-content">
       <h3>Reserveringen & Transacties</h3>
       <div id="transactionsList" class="transactions-list"></div>
+    </div>
+
+    <!-- Intenties Beheer Tab -->
+    <div id="intentionsTab" class="admin-tab-content">
+      <h3>Intenties Beheer</h3>
+      <div style="margin-bottom: 1.5em; padding: 1em; background: #e3f2fd; border-radius: 8px;">
+        <p><strong>Informatie:</strong> Tijdens de prioriteitsperiode (januari-maart) kunnen meerdere personen intenties indienen voor voorkeursmaanden (juni-september).</p>
+        <p style="margin-top: 0.5em;"><strong>Op 1 februari</strong> kun je hier de definitieve keuze maken door een intentie te bevestigen. Andere intenties voor dezelfde periode worden automatisch verwijderd.</p>
+      </div>
+      <div id="intentionsList" class="transactions-list"></div>
     </div>
 
     <!-- Settings Tab -->
