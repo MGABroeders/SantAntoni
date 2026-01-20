@@ -16,6 +16,7 @@
       </button>
       <h1><a href="index.html">Appartementen Sant Antoni</a></h1>
       <div class="header-right">
+        <span id="firebaseStatus" style="margin-right: 1em; font-size: 0.85em; padding: 0.3em 0.6em; border-radius: 4px; background: #f5f5f5; color: #666;" title="Firebase verbindingsstatus"></span>
         <a href="#" onclick="logout(); return false;" class="header-link">Uitloggen</a>
         <span id="authNav"></span>
       </div>
@@ -343,7 +344,32 @@
           }
         }, 1000);
       }
+      
+      // Check Firebase status
+      updateFirebaseStatus();
+      
+      // Update status periodically
+      setInterval(updateFirebaseStatus, 5000);
     });
+    
+    // Update Firebase status indicator
+    function updateFirebaseStatus() {
+      const statusEl = document.getElementById('firebaseStatus');
+      if (!statusEl) return;
+      
+      // Check if Firebase is ready
+      if (typeof isFirebaseReady === 'function' && isFirebaseReady()) {
+        statusEl.textContent = '✓ Firebase';
+        statusEl.style.background = '#e8f5e9';
+        statusEl.style.color = '#2e7d32';
+        statusEl.title = 'Firebase is verbonden en werkt';
+      } else {
+        statusEl.textContent = '⚠️ Local';
+        statusEl.style.background = '#fff3cd';
+        statusEl.style.color = '#856404';
+        statusEl.title = 'Firebase niet verbonden - gebruikt localStorage';
+      }
+    }
   </script>
 </body>
 </html>
